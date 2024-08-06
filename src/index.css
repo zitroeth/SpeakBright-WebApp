@@ -1,4 +1,4 @@
-:root {
+/* :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -64,5 +64,20 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+} */
+
+body {
+  margin: 0px;
+}
+
+.MuiTypography-root.MuiTypography-h6.css-1hwz2fv-MuiTypography-root {
+  padding: 0rem 0.5rem;
+  text-wrap: nowrap;
+}
+
+@media screen and (min-width: 1920px) {
+  #HAC {
+    padding: 0% 30% !important;
   }
 }
