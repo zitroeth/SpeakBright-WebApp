@@ -4,6 +4,7 @@
 import './App.css'
 import NavBar from './components/NavBar'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { default as Login } from './pages/Login';
 
 function App() {
   // const [count, setCount] = useState(0)
@@ -33,7 +34,7 @@ function App() {
     <BrowserRouter>
       <NavBar />
       <Routes>
-        {/* <Route path="/Home" element={<App />} /> */}
+        <Route path="/Login" element={<Login />} />
       </Routes>
     </BrowserRouter>
   )

@@ -127,7 +127,10 @@ export default function NavBar() {
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                             }}>
-                                <Button variant="outlined" color="primary"
+                                <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    href="/Login"
                                     sx={{
                                         backgroundColor: 'white',
                                         color: '#790377', // Text color to match the primary color
