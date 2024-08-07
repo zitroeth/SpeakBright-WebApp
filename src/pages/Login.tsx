@@ -13,8 +13,10 @@ import FormControl from '@mui/material/FormControl';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import { Link } from 'react-router-dom';
 import { auth } from '../config/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 
 export default function Login() {
@@ -30,13 +32,12 @@ export default function Login() {
     const signIn = async () => {
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            await signOut(auth);
+            window.location.href = '/Home';
         } catch (error) {
             alert(error);
         }
     }
 
-    console.log(auth.currentUser?.email);
     return (
         <ThemeProvider theme={mainTheme}>
             <Box
@@ -62,7 +63,7 @@ export default function Login() {
                         flexDirection: 'column',
                         alignItems: 'center',
                     }}>
-                    <img src={speakBrightLogo} alt="SpeakBright Logo"
+                    <img src={speakBrightLogo} alt="SpeakBright Logo" id='input-logo'
                         style={{
                             width: "80%",
                             margin: '10%',
@@ -91,8 +92,20 @@ export default function Login() {
                             label="Password"
                         />
                     </FormControl>
-                    <Button variant="contained" sx={{ marginTop: '10%', width: '80%' }} onClick={signIn}>Login</Button>
-
+                    <Button variant="contained" sx={{ marginTop: '10%', width: '80%', textTransform: 'capitalize' }} onClick={signIn}>Login</Button>
+                    <Typography
+                        variant="h6"
+                        component="div"
+                        sx={{
+                            margin: '15px',
+                            color: mainTheme.palette.primary.light,
+                        }}
+                    >
+                        Don't have an account?{' '}
+                        <Link to="/Register" style={{ color: mainTheme.palette.primary.light, textDecoration: 'none' }}>
+                            <b>Register here</b>
+                        </Link>
+                    </Typography>
                 </Paper>
             </Box>
         </ThemeProvider>

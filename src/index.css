@@ -69,16 +69,56 @@ button:focus-visible {
 
 body {
   margin: 0px;
+  height: 100vh;
+  width: 100vw;
 }
+/* 
+@media screen and (min-width: 1366px) {
+  #HAC.MuiButtonBase-root {
+    margin-right: 10px !important;
+  }
+} */
 
 .MuiTypography-root.MuiTypography-h6.css-1hwz2fv-MuiTypography-root {
-  padding: 0rem 0.5rem;
+  padding: 0rem 0rem;
   text-wrap: nowrap;
 }
 
-@media screen and (min-width: 1920px) {
-  #HAC {
-    padding: 0% 30% !important;
+@media screen and (min-height: 963px) {
+  .MuiInputBase-root {
+    height: 60px;
+    margin-bottom: 10px;
+  }
+  .MuiButtonBase-root#register-button {
+    height: 50px;
+  }
+  #input-logo {
+    margin: 5% 10% !important;
+  }
+}
+
+@media screen and (max-height: 700px) {
+  .MuiInputBase-root {
+    height: 40px;
+  }
+  #input-logo {
+    margin: 5% 10% !important;
+  }
+}
+
+@media screen and (max-height: 633px) {
+  /* .MuiAppBar-root.MuiPaper-root,
+  .MuiBox-root.css-i9gxme {
+    height: auto;
+  } */
+  #header-logo {
+    height: 65px !important;
+  }
+  .MuiInputBase-root {
+    height: 44px;
+  }
+  #input-logo {
+    margin: 0% 10% 5% 10% !important;
   }
 }
 
@@ -94,7 +134,14 @@ body {
   width: 100%;
 }
 
-body {
-  height: 100vh;
-  width: 100vw;
+.PrivateSwitchBase-input.MuiSwitch-input {
+  width: 750% !important;
+}
+
+.css-svzm34-MuiButtonBase-root-MuiSwitch-switchBase.Mui-checked {
+  transform: translateX(60%);
+}
+
+.MuiFormControl-root.MuiFormControl-marginDense.css-q96goa-MuiFormControl-root {
+  margin: 5px;
 }
