@@ -16,7 +16,8 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
 import { auth } from '../config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { checkIfDocumentExists } from '../hooks/useAuth';
 
 
 export default function Login() {
@@ -32,6 +33,14 @@ export default function Login() {
     const signIn = async () => {
         try {
             await signInWithEmailAndPassword(auth, email, password);
+            if (auth.currentUser?.uid) {
+                const isGuardian = await checkIfDocumentExists("user_guardian", auth.currentUser?.uid);
+                if (!isGuardian) {
+                    signOut(auth);
+                    throw new Error("Cannot use student login!");
+                }
+            }
+
             window.location.href = '/Home';
         } catch (error) {
             alert(error);

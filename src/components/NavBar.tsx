@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import { IconButton, LinearProgress, ThemeProvider } from '@mui/material';
+import { IconButton, ThemeProvider } from '@mui/material';
 import { mainTheme, gradientTheme } from '../themes/Theme';
 import speakBrightLogo from '../assets/SpeakBright 1.png';
 import { signOut } from 'firebase/auth';

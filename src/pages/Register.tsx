@@ -15,20 +15,22 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import grey from '@mui/material/colors/grey';
-import { Link } from 'react-router-dom';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { auth, secondaryAuth, db } from '../config/firebase';
+import { auth, db, secondaryAuth, secondaryDb } from '../config/firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Timestamp, doc, setDoc } from 'firebase/firestore'; // Import from Firebase
+import useAuth, { checkIfDocumentExists } from '../hooks/useAuth';
+import LoadingButton from '@mui/lab/LoadingButton';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 
 export default function Register() {
+    const { currentUser, loading } = useAuth();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [birthday, setBirthday] = useState<Timestamp | undefined>(undefined);
@@ -90,18 +92,34 @@ export default function Register() {
             const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
             const uid = userCredential.user.uid;
 
-            const data = {
+            const users_data = {
                 birthday: birthday,
                 email: email,
                 name: name,
                 userID: uid,
-                userType: guardian ? "Guardian" : "Student"
             }
 
-            await setDoc(doc(db, "users", uid), data);
-            if (data.userType === "Student") {
-                if (auth.currentUser)
-                    await setDoc(doc(db, "user_guardian", auth.currentUser.uid), { studentID: [uid] }, { merge: true });
+            await setDoc(doc(secondaryDb, "users", uid), users_data);
+            if (guardian === true) {
+                if (secondaryAuth?.currentUser?.uid) {
+                    // Incase documentID != guardianID
+                    const doesDocumentExist: boolean = await checkIfDocumentExists("user_guardian", secondaryAuth.currentUser.uid, secondaryDb);
+                    if (doesDocumentExist)
+                        throw new Error("Document Exists!");
+                    await setDoc(doc(secondaryDb, "user_guardian", uid), users_data);
+                }
+                else
+                    throw new Error('Authentication error!');
+            } else if (guardian === false) {
+                if (secondaryAuth?.currentUser?.uid && auth?.currentUser?.uid) {
+                    // Incase documentID != guardianID
+                    const doesDocumentExist: boolean = await checkIfDocumentExists("user_guardian", auth.currentUser.uid, secondaryDb);
+                    if (!doesDocumentExist)
+                        throw new Error("Guardian Document does not exist!");
+                    // Reference to the specific student document within the student subcollection
+                    const studentDocRef = doc(secondaryDb, 'user_guardian', auth.currentUser.uid, 'students', secondaryAuth.currentUser.uid);
+                    await setDoc(studentDocRef, users_data);
+                }
                 else
                     throw new Error('Authentication error!');
             }
@@ -145,23 +163,50 @@ export default function Register() {
                         }}
                     ></img>
                     <ButtonGroup variant="contained" aria-label="Basic button group" sx={{ width: '80%', marginBottom: '5px', }}>
-                        <Button onClick={handleGuardian}
+                        {loading ? (<LoadingButton loading
+                            variant="outlined"
+                            color="primary"
                             sx={{
-                                flex: 1,
-                                textAlign: 'center',
-                                backgroundColor: guardian ? grey[200] : mainTheme.palette.primary.main,
-                                color: guardian ? grey[900] : grey[50],
+                                backgroundColor: 'white',
+                                color: '#790377',
+                                borderColor: '#790377',
+                                '&:hover': {
+                                    backgroundColor: '#e0e0e0',
+                                    borderColor: '#6b0053',
+                                },
+                            }}
+                        >
+                            Loading...
+                        </LoadingButton>) :
+                            currentUser ? (<>
+                                <Button onClick={handleGuardian}
+                                    sx={{
+                                        flex: 1,
+                                        textAlign: 'center',
+                                        backgroundColor: guardian ? grey[200] : mainTheme.palette.primary.main,
+                                        color: guardian ? grey[900] : grey[50],
 
-                            }}>Student
-                        </Button>
-                        <Button onClick={handleGuardian}
-                            sx={{
-                                flex: 1,
-                                textAlign: 'center',
-                                backgroundColor: !guardian ? grey[200] : mainTheme.palette.primary.main,
-                                color: !guardian ? grey[900] : grey[50]
-                            }}>Guardian
-                        </Button>
+                                    }}>Student
+                                </Button>
+                                <Button onClick={handleGuardian}
+                                    sx={{
+                                        flex: 1,
+                                        textAlign: 'center',
+                                        backgroundColor: !guardian ? grey[200] : mainTheme.palette.primary.main,
+                                        color: !guardian ? grey[900] : grey[50]
+                                    }}>Guardian
+                                </Button></>
+                            ) : (
+                                <Button
+                                    sx={{
+                                        flex: 1,
+                                        textAlign: 'center',
+                                        backgroundColor: !guardian ? grey[200] : mainTheme.palette.primary.main,
+                                        color: !guardian ? grey[900] : grey[50]
+                                    }}>Guardian
+                                </Button>
+                            )
+                        }
                     </ButtonGroup>
 
                     <TextField label="Name" sx={{ width: '80%' }} margin="dense" onChange={(e) => setName(e.target.value)} />
