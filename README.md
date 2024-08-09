@@ -1,6 +1,6 @@
 # SpeakBright Application for Computer Science Thesis Project
 
-Thesis project for our Computer Science Mobile Development side
+Thesis project for our Computer Science Web Development side
 [Mobile App](https://github.com/Justin-Bolivar/SpeakBright_Thesis_Project)
 [Web App](https://github.com/zitroeth/SpeakBright-WebApp)
 
