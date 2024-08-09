@@ -92,7 +92,8 @@ body {
   .MuiButtonBase-root#register-button {
     height: 50px;
   }
-  #input-logo {
+  .register-paper#input-logo,
+  .login-paper#input-logo {
     margin: 5% 10% !important;
   }
 }
@@ -101,7 +102,8 @@ body {
   .MuiInputBase-root {
     height: 40px;
   }
-  #input-logo {
+  .register-paper#input-logo,
+  .login-paper#input-logo {
     margin: 5% 10% !important;
   }
 }
@@ -117,8 +119,13 @@ body {
   .MuiInputBase-root {
     height: 44px;
   }
-  #input-logo {
+  .register-paper#input-logo,
+  .login-paper#input-logo {
     margin: 0% 10% 5% 10% !important;
+  }
+
+  #paper-logo {
+    height: 3.5rem !important;
   }
 }
 

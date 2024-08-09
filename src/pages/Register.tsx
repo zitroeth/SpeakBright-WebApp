@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import speakBrightLogo from '../assets/SpeakBright_PL 3 CROP.png';
@@ -19,7 +19,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { auth, db, secondaryAuth, secondaryDb } from '../config/firebase';
+import { auth, secondaryAuth, secondaryDb } from '../config/firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Timestamp, doc, setDoc } from 'firebase/firestore'; // Import from Firebase
 import useAuth, { checkIfDocumentExists } from '../hooks/useAuth';
@@ -38,6 +38,13 @@ export default function Register() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [guardian, setGuardian] = useState(true);
+
+    useEffect(() => {
+        // Set default user type based on currentUser after loading
+        if (!loading && currentUser) {
+            setGuardian(false);
+        }
+    }, [loading, currentUser, guardian]);
 
     const handleGuardian = () => {
         setGuardian(!guardian);
@@ -155,7 +162,8 @@ export default function Register() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                    }}>
+                    }}
+                    className='register-paper'>
                     <img src={speakBrightLogo} alt="SpeakBright Logo" id='input-logo'
                         style={{
                             width: "80%",

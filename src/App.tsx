@@ -13,6 +13,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { default as Home } from './pages/Home';
 import { default as Login } from './pages/Login';
 import { default as Register } from './pages/Register';
+import { default as Student } from './pages/Student';
 
 
 function App() {
@@ -34,8 +35,10 @@ function App() {
         <NavBar />
         <Routes>
           <Route path="/" element={currentUser ? <Home /> : <Navigate to="/Login" replace />} />
+          <Route path="/Home" element={currentUser ? <Home /> : <Navigate to="/Login" replace />} />
           <Route path="/Login" element={<Login />} />
           <Route path="/Register" element={<Register />} />
+          <Route path="/Home/:id" element={<Student />} />
         </Routes>
       </BrowserRouter>
     </LocalizationProvider>

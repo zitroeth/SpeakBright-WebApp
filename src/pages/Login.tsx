@@ -71,7 +71,8 @@ export default function Login() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                    }}>
+                    }}
+                    className='login-paper'>
                     <img src={speakBrightLogo} alt="SpeakBright Logo" id='input-logo'
                         style={{
                             width: "80%",
