@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+src/config/speakbright-55025-firebase-adminsdk-txs7j-a7be3c1004.json
+src/config/admin.ts

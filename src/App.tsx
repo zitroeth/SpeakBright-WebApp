@@ -38,7 +38,7 @@ function App() {
           <Route path="/Home" element={currentUser ? <Home /> : <Navigate to="/Login" replace />} />
           <Route path="/Login" element={<Login />} />
           <Route path="/Register" element={<Register />} />
-          <Route path="/Home/:id" element={<Student />} />
+          <Route path="/Home/:id" element={<Student guardianId={currentUser?.uid as string} />} />
         </Routes>
       </BrowserRouter>
     </LocalizationProvider>

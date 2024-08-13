@@ -137,8 +137,8 @@ body {
 #root {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
+  height: 100vh;
+  width: 100vw;
 }
 
 .PrivateSwitchBase-input.MuiSwitch-input {
@@ -152,3 +152,11 @@ body {
 .MuiFormControl-root.MuiFormControl-marginDense.css-q96goa-MuiFormControl-root {
   margin: 5px;
 }
+
+/* #add-photo-imagelist .MuiImageList-standard {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-content: center !important;
+  text-align: center !important;
+} */

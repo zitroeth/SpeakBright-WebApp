@@ -2,15 +2,15 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 // import { getAnalytics } from "firebase/analytics";
-
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: "AIzaSyBHA7H1TQZsuTG_vlIGivUxNugdmtsGJIA",
     authDomain: "speakbright-55025.firebaseapp.com",
     projectId: "speakbright-55025",
@@ -23,8 +23,16 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+
+// Get Auth instances
 export const auth: Auth = getAuth(app);
 export const secondaryAuth: Auth = getAuth(secondaryApp);
+
+// Get Firestore instances
 export const db: Firestore = getFirestore(app);
 export const secondaryDb: Firestore = getFirestore(secondaryApp);
+
+// Get Storage instance
+export const storage = getStorage();
+
 // const analytics = getAnalytics(app);

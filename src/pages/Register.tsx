@@ -104,6 +104,7 @@ export default function Register() {
                 email: email,
                 name: name,
                 userID: uid,
+                userType: guardian ? 'guardian' : 'student',
             }
 
             await setDoc(doc(secondaryDb, "users", uid), users_data);
