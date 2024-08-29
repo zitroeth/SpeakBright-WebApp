@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import mainTheme from "../themes/Theme";
 import { useEffect, useState } from "react";
-import { getCardCategories, getOtherStudentCards, getStudentCards, removeCard, removeStudent, setCard, setImage } from "../functions/query";
+import { getCardCategories, getOtherStudentCards, getStudentCards, getStudentLatestEmotion, getStudentSentences, removeCard, removeStudent, setCard, setEmotion, setEmotionDays, setImage } from "../functions/query";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import { Backdrop, Button, Card, CardActions, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField } from "@mui/material";
@@ -48,7 +48,8 @@ export default function Cards(props: CardsProps) {
     const [allCards, setAllCards] = useState<React.ReactNode[]>([]); // All Cards of current user
     const [cards, setCards] = useState<React.ReactNode[]>([]); // Filtered React Element Cards
     const [otherCards, setOtherCards] = useState<React.ReactNode[]>([]); // Cards that current user doesnt contain
-
+    // const [isSettingEmotion, setIsSettingEmotion] = useState(false);
+    const [latestEmotion, setLatestEmotion] = useState<object | null>(null);
 
     const handleCategoryChange = (event: React.SyntheticEvent, newValue: string) => {
         setCategory(newValue);
@@ -69,6 +70,7 @@ export default function Cards(props: CardsProps) {
                 const card_data = {
                     category: inputCategory,
                     imageUrl: "",
+                    tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
                 }
@@ -78,6 +80,7 @@ export default function Cards(props: CardsProps) {
                 const card_data = {
                     category: inputCategory,
                     imageUrl: inputCardUrl,
+                    tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
                 }
@@ -160,9 +163,46 @@ export default function Cards(props: CardsProps) {
             setOtherCards(otherCardsArray);
         }
 
+        // const setStudentEmotion = async () => {
+        //     let studentSentences = null;
+        //     studentSentences = await getStudentSentences(props.studentId);
+        //     console.log(studentSentences)
+
+        //     studentSentences.forEach(date => {
+        //         let dateSentences = [];
+        //         date.values.forEach(element => {
+
+        //         });
+        //     });
+
+        //     const emotion_data = {
+        //         date: ,
+        //         sentence: ,
+        //         nword: ,
+        //         data: ,
+        //         headers: ,
+        //     }
+        // }
+
+        const setStudentEmotion = async () => {
+            try {
+                await setEmotionDays(props.studentId);
+            } catch (error) {
+                console.error("Error setting student emotion:", error);
+            }
+        };
+
+        const fetchLatestEmotion = async () => {
+            const latestEmotion = await getStudentLatestEmotion(props.studentId);
+            setLatestEmotion(latestEmotion);
+        }
+
+        setStudentEmotion();
+
         fetchCategories();
         fetchCards();
         fetchOtherCards();
+        fetchLatestEmotion();
     }, [props.studentId,]);
 
     useEffect(() => {

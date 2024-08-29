@@ -3,16 +3,19 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Typography from '@mui/material/Typography';
-import emotionImage from '../assets/earth 1.png';
+import defaultEmotion from '../assets/emotion/neutralemoji.png';
+interface EmotionCardProps {
+    emotionImage: string | null;
+}
 
-export default function EmotionCard() {
+export default function EmotionCard(props: EmotionCardProps) {
 
     return (
         <Card elevation={10} sx={{ display: 'flex', alignItems: 'center', borderRadius: '30px' }}>
             <CardMedia
                 component="img"
                 sx={{ height: '10vh', width: 'auto', objectFit: 'contain' }}
-                src={emotionImage}
+                src={props.emotionImage || defaultEmotion}
                 alt="Emotion Image"
             />
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
