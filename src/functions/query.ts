@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, StorageReference, uploadBytes } from "firebase/storage";
 import { storage, db, auth } from '../config/firebase';
 import { adminAuth } from '../config/admin';
@@ -153,7 +153,6 @@ export async function setEmotionDays(studentId: string) {
     let groupedSentences = await getStudentSentences(studentId);
     groupedSentences = await getEmotionScore(groupedSentences)
 
-
     try {
         groupedSentences.forEach(day => {
             const emotionScoreArray: number[] = [];
@@ -184,27 +183,51 @@ export async function setEmotionDays(studentId: string) {
 }
 
 // Set emotion in firebase
+// export async function setEmotion(emotion_data: { date: Timestamp, emotion: string, userId: string }) {
+//     try {
+//         const emotionQuery = query(
+//             collection(db, "emotions"),
+//             where("date", "==", emotion_data.date),
+//             where("userId", "==", emotion_data.userId)
+//         );
+//         const docId = `${emotion_data.userId}_${emotion_data.date.seconds}`;
+//         const querySnapshot = await getDocs(emotionQuery);
+
+//         if (querySnapshot.empty) {
+//             await addDoc(collection(db, "emotions", docId));
+//         } else {
+//             const docId = querySnapshot.docs[0].id;
+//             const docRef = doc(db, "emotions", docId);
+
+//             await updateDoc(docRef, emotion_data);
+//         }
+//         console.log(Date.now());
+//     } catch (error) {
+//         alert(error);
+//     }
+// }
+
 export async function setEmotion(emotion_data: { date: Timestamp, emotion: string, userId: string }) {
     try {
-        const emotionQuery = query(
-            collection(db, "emotions"),
-            where("date", "==", emotion_data.date),
-            where("userId", "==", emotion_data.userId)
-        );
+        // Generate a unique document ID based on userId and date
+        const docId = `${emotion_data.userId}_${emotion_data.date.seconds}`;
 
-        const querySnapshot = await getDocs(emotionQuery);
+        // Reference to the document using the generated ID
+        const docRef = doc(db, "emotions", docId);
 
-        if (querySnapshot.empty) {
-            await addDoc(collection(db, "emotions"), emotion_data);
+        // Check if the document exists
+        const docSnapshot = await getDoc(docRef);
+
+        if (docSnapshot.exists()) {
+            // Update the existing document if it exists
+            await setDoc(docRef, emotion_data, { merge: true });
         } else {
-            const docId = querySnapshot.docs[0].id;
-            const docRef = doc(db, "emotions", docId);
-
-            await updateDoc(docRef, emotion_data);
+            // Create a new document if it does not exist
+            await setDoc(docRef, emotion_data);
         }
         console.log(Date.now());
     } catch (error) {
-        alert(error);
+        console.error("Error setting emotion:", error);
     }
 }
 
@@ -305,20 +328,22 @@ function convertToTimestamp(dateString: string) {
 }
 
 export async function getStudentLatestEmotion(studentId: string) {
-    // Query to get the latest emotion document for the student
+    // Query to get the latest 2 emotion documents for the student
     const emotionQuery = query(
         collection(db, "emotions"),
         where("userId", "==", studentId),
-        orderBy("date", 'desc'),
-        limit(1)
+        orderBy("date", "desc"),
+        limit(2)
     );
 
     try {
         const emotionSnapshot = await getDocs(emotionQuery);
         // Check if there's at least one document
         if (!emotionSnapshot.empty) {
-            // Get the first document's data
-            const latestEmotionDoc = emotionSnapshot.docs[0];
+            // Get the latest emotion document
+            const latestEmotionDoc = emotionSnapshot.docs.length > 1
+                ? emotionSnapshot.docs[0] // 1 if you want second to the last emotion
+                : emotionSnapshot.docs[0];
             return latestEmotionDoc.data();
         } else {
             // No documents found

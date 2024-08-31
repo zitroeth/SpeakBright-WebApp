@@ -49,7 +49,6 @@ export default function Cards(props: CardsProps) {
     const [cards, setCards] = useState<React.ReactNode[]>([]); // Filtered React Element Cards
     const [otherCards, setOtherCards] = useState<React.ReactNode[]>([]); // Cards that current user doesnt contain
     // const [isSettingEmotion, setIsSettingEmotion] = useState(false);
-    const [latestEmotion, setLatestEmotion] = useState<object | null>(null);
 
     const handleCategoryChange = (event: React.SyntheticEvent, newValue: string) => {
         setCategory(newValue);
@@ -163,46 +162,9 @@ export default function Cards(props: CardsProps) {
             setOtherCards(otherCardsArray);
         }
 
-        // const setStudentEmotion = async () => {
-        //     let studentSentences = null;
-        //     studentSentences = await getStudentSentences(props.studentId);
-        //     console.log(studentSentences)
-
-        //     studentSentences.forEach(date => {
-        //         let dateSentences = [];
-        //         date.values.forEach(element => {
-
-        //         });
-        //     });
-
-        //     const emotion_data = {
-        //         date: ,
-        //         sentence: ,
-        //         nword: ,
-        //         data: ,
-        //         headers: ,
-        //     }
-        // }
-
-        const setStudentEmotion = async () => {
-            try {
-                await setEmotionDays(props.studentId);
-            } catch (error) {
-                console.error("Error setting student emotion:", error);
-            }
-        };
-
-        const fetchLatestEmotion = async () => {
-            const latestEmotion = await getStudentLatestEmotion(props.studentId);
-            setLatestEmotion(latestEmotion);
-        }
-
-        setStudentEmotion();
-
         fetchCategories();
         fetchCards();
         fetchOtherCards();
-        fetchLatestEmotion();
     }, [props.studentId,]);
 
     useEffect(() => {
@@ -222,6 +184,19 @@ export default function Cards(props: CardsProps) {
             setDoneButton(true);
         }
     }, [inputCardName, inputCategory, inputImage, inputCardUrl]);
+
+    useEffect(() => {
+        const setStudentEmotion = async () => {
+            try {
+                await setEmotionDays(props.studentId);
+            } catch (error) {
+                console.error("Error setting student emotion:", error);
+            }
+        };
+
+        setStudentEmotion();
+    }, []);
+
 
 
     return (

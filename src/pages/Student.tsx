@@ -19,6 +19,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
+import { getStudentLatestEmotion } from "../functions/query";
 
 function a11yProps(index: number) {
     return {
@@ -36,6 +37,17 @@ export default function Student(props: StudentProps) {
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
+    const [latestEmotion, setLatestEmotion] = useState<object | null>(null);
+
+    useEffect(() => {
+        const fetchLatestEmotion = async () => {
+            const latestEmotion = await getStudentLatestEmotion(id);
+            setLatestEmotion(latestEmotion);
+            console.log(latestEmotion)
+            console.log(latestEmotion.date.toDate())
+        }
+        fetchLatestEmotion();
+    }, [])
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -124,7 +136,7 @@ export default function Student(props: StudentProps) {
                         </Typography>
                     </Box>
 
-                    <EmotionCard />
+                    <EmotionCard emotionTitle={latestEmotion?.emotion} />
                 </Box>
 
                 <Box display='flex' flexDirection='row' justifyContent='flex-start'
