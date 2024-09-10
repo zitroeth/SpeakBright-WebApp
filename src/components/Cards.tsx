@@ -185,20 +185,6 @@ export default function Cards(props: CardsProps) {
         }
     }, [inputCardName, inputCategory, inputImage, inputCardUrl]);
 
-    useEffect(() => {
-        const setStudentEmotion = async () => {
-            try {
-                await setEmotionDays(props.studentId);
-            } catch (error) {
-                console.error("Error setting student emotion:", error);
-            }
-        };
-
-        setStudentEmotion();
-    }, []);
-
-
-
     return (
         <Box display='flex' flexDirection='column' justifyContent='flex-start' width={'100%'} height={'100%'} flex={1}
             sx={{

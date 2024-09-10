@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { getStudentInfo, removeStudent } from "../functions/query";
+import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
 import { useEffect, useState } from "react";
 import { DocumentData } from "firebase/firestore";
 import Box from "@mui/material/Box";
@@ -37,17 +37,28 @@ export default function Student(props: StudentProps) {
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
-    const [latestEmotion, setLatestEmotion] = useState<object | null>(null);
+    const [latestEmotion, setLatestEmotion] = useState<string | null>(null);
+
+    // useEffect(() => {
+        const setStudentEmotion = async () => {
+            try {
+                await setEmotionDays(id as string);
+                const latestStudentEmotion = await getStudentLatestEmotion(id as string);
+                console.log(`BEFORE STUDENT: ${latestStudentEmotion?.emotion}`)
+                setLatestEmotion(latestStudentEmotion?.emotion);
+                console.log(`AFTER STUDENT: ${latestStudentEmotion?.emotion}`)
+            } catch (error) {
+                console.error("Error setting student emotion:", error);
+            }
+        };
+
+        setStudentEmotion();
+    // }, []);
 
     useEffect(() => {
-        const fetchLatestEmotion = async () => {
-            const latestEmotion = await getStudentLatestEmotion(id);
-            setLatestEmotion(latestEmotion);
-            console.log(latestEmotion)
-            console.log(latestEmotion.date.toDate())
-        }
-        fetchLatestEmotion();
-    }, [])
+        console.log(`latestEmotion changed: ${latestEmotion}`);
+    }, [latestEmotion]);
+    
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -136,7 +147,7 @@ export default function Student(props: StudentProps) {
                         </Typography>
                     </Box>
 
-                    <EmotionCard emotionTitle={latestEmotion?.emotion} />
+                    <EmotionCard emotionTitle={latestEmotion} />
                 </Box>
 
                 <Box display='flex' flexDirection='row' justifyContent='flex-start'

@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc, getDocsFromServer } from 'firebase/firestore';
 import { getDownloadURL, ref, StorageReference, uploadBytes } from "firebase/storage";
 import { storage, db, auth } from '../config/firebase';
 import { adminAuth } from '../config/admin';
@@ -166,20 +166,38 @@ export async function setEmotionDays(studentId: string) {
                     emotionHeaderArray = element.emotionScores.headers;
             });
 
-            const highestIndex = emotionScoreArray.indexOf(Math.max(...emotionScoreArray));
-            const emotion = emotionHeaderArray[highestIndex];
+            let emotion = 'None';
+            if(!areAllNumbersSame(emotionScoreArray)){
+                const highestIndex = emotionScoreArray.indexOf(Math.max(...emotionScoreArray));
+                emotion = emotionHeaderArray[highestIndex];
+            }
+
 
             const emotion_data = {
                 date: convertToTimestamp(day.date),
                 emotion: emotion,
                 userId: studentId,
             };
-
             setEmotion(emotion_data);
         });
     } catch (error) {
         alert(error);
     }
+}
+
+function areAllNumbersSame(arr: number[]): boolean {
+    if (arr.length === 0) {
+        return true;
+    }
+
+    const firstElement = arr[0];
+    for (let i = 1; i < arr.length; i++) {
+        if (arr[i] !== firstElement) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 // Set emotion in firebase
@@ -220,12 +238,13 @@ export async function setEmotion(emotion_data: { date: Timestamp, emotion: strin
 
         if (docSnapshot.exists()) {
             // Update the existing document if it exists
+            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotion}`);
             await setDoc(docRef, emotion_data, { merge: true });
         } else {
             // Create a new document if it does not exist
+            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotion}`);
             await setDoc(docRef, emotion_data);
         }
-        console.log(Date.now());
     } catch (error) {
         console.error("Error setting emotion:", error);
     }
@@ -337,13 +356,15 @@ export async function getStudentLatestEmotion(studentId: string) {
     );
 
     try {
-        const emotionSnapshot = await getDocs(emotionQuery);
+        const emotionSnapshot = await getDocsFromServer(emotionQuery);
         // Check if there's at least one document
         if (!emotionSnapshot.empty) {
             // Get the latest emotion document
             const latestEmotionDoc = emotionSnapshot.docs.length > 1
                 ? emotionSnapshot.docs[0] // 1 if you want second to the last emotion
                 : emotionSnapshot.docs[0];
+                console.log("latestEmotionDoc")
+                console.log(latestEmotionDoc.data())
             return latestEmotionDoc.data();
         } else {
             // No documents found
