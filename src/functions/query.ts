@@ -151,7 +151,7 @@ interface Sentence {
 
 export async function setEmotionDays(studentId: string) {
     let groupedSentences = await getStudentSentences(studentId);
-    groupedSentences = await getEmotionScore(groupedSentences)
+    groupedSentences = await getEmotionScore(groupedSentences);
 
     try {
         groupedSentences.forEach(day => {
@@ -166,16 +166,19 @@ export async function setEmotionDays(studentId: string) {
                     emotionHeaderArray = element.emotionScores.headers;
             });
 
-            let emotion = 'None';
-            if(!areAllNumbersSame(emotionScoreArray)){
-                const highestIndex = emotionScoreArray.indexOf(Math.max(...emotionScoreArray));
-                emotion = emotionHeaderArray[highestIndex];
-            }
+            // Find the highest scores and their corresponding emotions
+            let highestEmotions: string[] = [];
+            const maxScore = Math.max(...emotionScoreArray);
 
+            if (maxScore > 0) {
+                highestEmotions = emotionScoreArray
+                    .map((score, index) => (score === maxScore ? emotionHeaderArray[index] : null))
+                    .filter(Boolean) as string[];
+            }
 
             const emotion_data = {
                 date: convertToTimestamp(day.date),
-                emotion: emotion,
+                emotions: highestEmotions,
                 userId: studentId,
             };
             setEmotion(emotion_data);
@@ -183,21 +186,6 @@ export async function setEmotionDays(studentId: string) {
     } catch (error) {
         alert(error);
     }
-}
-
-function areAllNumbersSame(arr: number[]): boolean {
-    if (arr.length === 0) {
-        return true;
-    }
-
-    const firstElement = arr[0];
-    for (let i = 1; i < arr.length; i++) {
-        if (arr[i] !== firstElement) {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 // Set emotion in firebase
@@ -225,7 +213,7 @@ function areAllNumbersSame(arr: number[]): boolean {
 //     }
 // }
 
-export async function setEmotion(emotion_data: { date: Timestamp, emotion: string, userId: string }) {
+export async function setEmotion(emotion_data: { date: Timestamp, emotions: string[], userId: string }) {
     try {
         // Generate a unique document ID based on userId and date
         const docId = `${emotion_data.userId}_${emotion_data.date.seconds}`;
@@ -238,11 +226,11 @@ export async function setEmotion(emotion_data: { date: Timestamp, emotion: strin
 
         if (docSnapshot.exists()) {
             // Update the existing document if it exists
-            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotion}`);
+            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotions}`);
             await setDoc(docRef, emotion_data, { merge: true });
         } else {
             // Create a new document if it does not exist
-            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotion}`);
+            console.log(`${emotion_data.date.toDate()} ${emotion_data.emotions}`);
             await setDoc(docRef, emotion_data);
         }
     } catch (error) {
@@ -363,8 +351,8 @@ export async function getStudentLatestEmotion(studentId: string) {
             const latestEmotionDoc = emotionSnapshot.docs.length > 1
                 ? emotionSnapshot.docs[0] // 1 if you want second to the last emotion
                 : emotionSnapshot.docs[0];
-                console.log("latestEmotionDoc")
-                console.log(latestEmotionDoc.data())
+            console.log("latestEmotionDoc")
+            console.log(latestEmotionDoc.data())
             return latestEmotionDoc.data();
         } else {
             // No documents found
