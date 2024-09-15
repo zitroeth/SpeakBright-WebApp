@@ -150,31 +150,28 @@ export default function Student(props: StudentProps) {
 
                 <Box display='flex' flexDirection='row' justifyContent='flex-start'
                     sx={{
-                        mt: '2vh',
-                        width: 'min-content'
+                        mt: '16px',
                     }}
                 >
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="basic tabs example"
                         sx={{
-                            ml: '20px',
+                            border: '1px solid #e8e8e8',
                         }}>
                         <Tab label="Cards" {...a11yProps(0)}
                             sx={{
-                                border: '1px solid #e8e8e8',
+                                // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />
                         <Tab label="Notes" {...a11yProps(1)}
                             sx={{
-                                border: '1px solid #e8e8e8',
-                                ml: '20px',
+                                // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />
                         <Tab label="Summary" {...a11yProps(2)}
                             sx={{
-                                border: '1px solid #e8e8e8',
-                                mx: '20px',
+                                // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />

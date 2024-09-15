@@ -119,14 +119,18 @@ export default function Cards(props: CardsProps) {
             if (studentCards) {
                 for (const [key, value] of studentCards) {
                     cardsArray.push(
-                        <Card key={key} data-category-type={value.category} sx={{ maxHeight: '25vh', minWidth: '25vh', marginBottom: '20px' }}>
+                        <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
                             <CardMedia
                                 sx={{ height: '15vh', width: '100%', objectFit: 'contain', }}
                                 image={value.imageUrl}
                                 title={value.title}
                             />
                             <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography gutterBottom variant="h5" component="h5">
+                                <Typography gutterBottom variant="h5" component="h5" sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    textWrap: 'nowrap'
+                                }}>
                                     {value.title}
                                 </Typography>
                                 <IconButton aria-label="delete" size="medium" color='error' sx={{ pt: "0" }} onClick={() => setDeleteCardModal({ isActive: true, cardId: key, cardName: value.title })}>
@@ -424,14 +428,14 @@ export default function Cards(props: CardsProps) {
             </Dialog>
 
 
-            <Typography variant="h6" component="div"
+            {/* <Typography variant="h6" component="div"
                 sx={{
                     textTransform: "capitalize",
                     color: mainTheme.palette.primary.main,
                 }}
             >
                 {`Current Cards`}
-            </Typography>
+            </Typography> */}
 
             <Box display='flex' flexDirection='row' justifyContent='space-between'
                 sx={{
@@ -441,14 +445,16 @@ export default function Cards(props: CardsProps) {
                 <Tabs
                     value={category}
                     onChange={handleCategoryChange}
-                    variant="scrollable"
+                    // variant="scrollable"
                     scrollButtons
                     allowScrollButtonsMobile
                     aria-label="scrollable force tabs example"
                     sx={{
                         '& .MuiTabs-indicator': {
-                            // backgroundColor: colors[category % colors.length], // Change indicator color based on the active tab
+                            // backgroundColor: colors[categories ? Array.from(categories.values()).findIndex(cat => cat.category === category) : 0] || '#790377',
                         },
+                        border: `1px solid ${mainTheme.palette.secondary.main}`,
+                        borderRadius: '10px',
                     }}
                 >
                     {categories && Array.from(categories.entries()).map(([key, value], index) => (
@@ -465,16 +471,29 @@ export default function Cards(props: CardsProps) {
                 <Button disabled={otherCards.length === 0} variant="contained" onClick={() => setAddCardModal(true)} sx={{ textTransform: 'capitalize' }}>Add Card +</Button>
             </Box>
 
-            <Box flex={1} display='flex' flexDirection='row' flexWrap='wrap' justifyContent='space-around'
+            {/* <Box flex={1} display='flex' flexDirection='row' flexWrap='wrap' justifyContent='space-around'
                 sx={{
                     overflowX: 'auto', overflowY: 'auto',
                     mt: '1%', p: '1%',
-
                 }}
             >
-                {cards}     {/* {Make this part Scrollable} */}
+                {cards}
+            </Box> */}
+            <Box
+                display="grid"
+                gridTemplateColumns="repeat(auto-fill, minmax(18%, 1fr))"
+                sx={{
+                    mt: '1%',
+                    height: '100%',
+                    width: '100%',
+                    overflowX: 'hidden',
+                    overflowY: 'auto',
+                    rowGap: '5%',
+                    columnGap: '1%',
+                }}
+            >
+                {cards}
             </Box>
-
         </Box >
     );
 }
