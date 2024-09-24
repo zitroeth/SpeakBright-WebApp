@@ -56,8 +56,6 @@ import anticipationEmotion from '../assets/emotion/anticipationemoji.png';
 import disgustEmotion from '../assets/emotion/disgustemoji.png';
 import fearEmotion from '../assets/emotion/fearemoji.png';
 import joyEmotion from '../assets/emotion/joyemoji.png';
-import negativeEmotion from '../assets/emotion/negativeemoji.png';
-import positiveEmotion from '../assets/emotion/positiveemoji.png';
 import sadnessEmotion from '../assets/emotion/sadnessemoji.png';
 import surpriseEmotion from '../assets/emotion/supriseemoji.png';
 import trustEmotion from '../assets/emotion/trustemoji.png';
@@ -74,15 +72,13 @@ export default function EmotionCard(props: EmotionCardProps) {
         disgust: disgustEmotion,
         fear: fearEmotion,
         joy: joyEmotion,
-        negative: negativeEmotion,
-        positive: positiveEmotion,
         sadness: sadnessEmotion,
         surprise: surpriseEmotion,
         trust: trustEmotion,
     };
 
     // Get the corresponding image or use the default if the emotion is not in the map
-    const emotionImage = props?.emotions.length !== 0
+    const emotionImage = props?.emotions?.length !== 0
         ? emotionImages[props.emotions[0].toLowerCase()] || defaultEmotion
         : defaultEmotion;
 
@@ -97,10 +93,10 @@ export default function EmotionCard(props: EmotionCardProps) {
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 <CardContent sx={{ flex: '1 0 auto', padding: '8px !important' }}>
                     <Typography component="div" variant="subtitle1">
-                        {props?.emotions.length !== 0 ? 'Lately, has been feeling' : 'No emotion detected'}
+                        {props?.emotions?.length !== 0 ? 'Lately, has been feeling' : 'No emotion detected'}
                     </Typography>
                     <Typography variant="h6" component="div">
-                        {props?.emotions.length !== 0 ? props.emotions.join(', ') : 'No emotion detected'}
+                        {props?.emotions?.length !== 0 ? props.emotions?.join(', ') : 'No emotion detected'}
                     </Typography>
                 </CardContent>
             </Box>

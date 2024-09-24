@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
 import { useEffect, useState } from "react";
-import { DocumentData } from "firebase/firestore";
+import { collection, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import EmotionCard from "../components/EmotionCard";
@@ -21,6 +21,7 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import { getStudentLatestEmotion } from "../functions/query";
 import useAuth from "../hooks/useAuth";
+import { db } from "../config/firebase";
 
 function a11yProps(index: number) {
     return {
@@ -38,19 +39,58 @@ export default function Student() {
 
     const guardianId = useAuth().currentUser?.uid;
 
+    // useEffect(() => {
+    //     const setStudentLatestEmotion = async () => {
+    //         try {
+    //             await setEmotionDays(id as string);
+    //             const latestStudentEmotion = await getStudentLatestEmotion(id as string);
+    //             setLatestEmotion(latestStudentEmotion?.emotions || []);
+    //         } catch (error) {
+    //             alert(error);
+    //         }
+    //     };
+
+    //     setStudentLatestEmotion();
+    // }, [id, setLatestEmotion]);
+
     useEffect(() => {
-        const setStudentLatestEmotion = async () => {
+        const initializeStudentEmotions = async () => {
             try {
                 await setEmotionDays(id as string);
-                const latestStudentEmotion = await getStudentLatestEmotion(id as string);
-                setLatestEmotion(latestStudentEmotion?.emotions || []);
             } catch (error) {
                 alert(error);
             }
         };
 
-        setStudentLatestEmotion();
-    }, [id, setLatestEmotion]);
+        initializeStudentEmotions();
+    }, [id]);
+
+    useEffect(() => {
+        const emotionQuery = query(
+            collection(db, "emotions"),
+            where("userId", "==", id),
+            orderBy("date", "desc"),
+            limit(2)
+        );
+
+        const unsubscribe = onSnapshot(emotionQuery, (emotionSnapshot) => {
+            if (!emotionSnapshot.empty) {
+                // Get the latest emotion document (adjust if needed)
+                const latestEmotionDoc = emotionSnapshot.docs.length > 1
+                    ? emotionSnapshot.docs[0] // Change this if you need second-to-last
+                    : emotionSnapshot.docs[0];
+
+                console.log("Real-time latestEmotionDoc:", latestEmotionDoc.data());
+                setLatestEmotion(latestEmotionDoc.data().emotions);
+            } else {
+                setLatestEmotion([]);
+            }
+        }, (error: Error) => {
+            console.error("Error fetching real-time emotions:", error);
+        });
+
+        return () => unsubscribe();
+    }, [id]);
 
     useEffect(() => {
         console.log(`latestEmotion changed: ${latestEmotion}`);
