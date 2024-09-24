@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
 import { useEffect, useState } from "react";
-import { collection, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { collection, doc, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import EmotionCard from "../components/EmotionCard";
@@ -22,6 +22,7 @@ import DialogActions from "@mui/material/DialogActions";
 import { getStudentLatestEmotion } from "../functions/query";
 import useAuth from "../hooks/useAuth";
 import { db } from "../config/firebase";
+import StudentPrompt from "../components/StudentPrompt";
 
 function a11yProps(index: number) {
     return {
@@ -36,6 +37,7 @@ export default function Student() {
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
     const [latestEmotion, setLatestEmotion] = useState<string[]>([]);
+    const [studentPrompts, setStudentPrompts] = useState({});
 
     const guardianId = useAuth().currentUser?.uid;
 
@@ -89,6 +91,24 @@ export default function Student() {
             console.error("Error fetching real-time emotions:", error);
         });
 
+        return () => unsubscribe();
+    }, [id]);
+
+    useEffect(() => {
+        const documentRef = doc(db, 'prompt', id as string);
+
+        const unsubscribe = onSnapshot(documentRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                setStudentPrompts(docSnapshot.data());
+                console.log(docSnapshot.data())
+            } else {
+                setStudentPrompts({});
+            }
+        }, (error) => {
+            alert(error);
+        });
+
+        // Clean up the subscription when the component unmounts or docId changes
         return () => unsubscribe();
     }, [id]);
 
@@ -167,21 +187,32 @@ export default function Student() {
                     }}
                 >
                     <Box display='flex' flexDirection='column'>
-                        <Typography variant="h4" component="div"
+                        <Typography variant="h5" component="h5"
                             sx={{
                                 textTransform: "capitalize",
+                                fontWeight: 'bold',
                             }}
                         >
                             {studentInfo?.name}
                         </Typography>
-                        <Typography variant="h6" component="div"
+                        <Typography variant="h6" component="h6"
                             sx={{
                                 textTransform: "capitalize",
-                                mt: '.5em'
+                                mt: '4px'
                             }}
                         >
                             {`Student ID: ${studentInfo?.userID}`}
                         </Typography>
+                    </Box>
+
+                    <Box display='flex'
+                        sx={{
+                            height: 'auto',
+                            width: 'fit-content',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}>
+                        <StudentPrompt studentPrompts={studentPrompts} />
                     </Box>
 
                     <EmotionCard emotions={latestEmotion || []} />
