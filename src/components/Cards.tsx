@@ -2,10 +2,10 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import mainTheme from "../themes/Theme";
 import { useEffect, useMemo, useState } from "react";
-import { getCardCategories, getOtherStudentCards, getStudentCards, getStudentLatestEmotion, getStudentSentences, removeCard, removeStudent, setCard, setEmotion, setEmotionDays, setImage } from "../functions/query";
+import { getCardCategories, getOtherStudentCards, getStudentCards, removeCard, setCard, setImage } from "../functions/query";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import { Backdrop, Button, Card, CardActions, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField } from "@mui/material";
+import { Backdrop, Button, Card, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ThemeProvider } from "@emotion/react";
@@ -28,7 +28,6 @@ const addCardModalStyle = {
 
 interface CardsProps {
     studentId: string;
-    guardianId: string;
 }
 
 export default function Cards(props: CardsProps) {

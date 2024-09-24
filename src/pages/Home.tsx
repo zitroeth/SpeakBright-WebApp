@@ -4,12 +4,14 @@ import speakBrightLogo from '../assets/SpeakBright_PL 3 CROP.png';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import { getStudents } from '../functions/query';
-import { auth } from '../config/firebase';
 import { useEffect, useState } from 'react';
 import AddIcon from '@mui/icons-material/Add';
+import useAuth from '../hooks/useAuth';
 
 export default function Home() {
     const [papers, setPapers] = useState<React.ReactNode[]>([]);
+
+    const { currentUser } = useAuth();
 
     const handlePaperClick = async (index: string) => {
         window.location.href = `/Home/${index}`;
@@ -20,8 +22,8 @@ export default function Home() {
             const papersArray = [];
             let studentList = null;
 
-            if (auth?.currentUser?.uid) {
-                studentList = await getStudents(auth.currentUser.uid);
+            if (currentUser?.uid) {
+                studentList = await getStudents(currentUser.uid);
             }
 
             if (studentList) {

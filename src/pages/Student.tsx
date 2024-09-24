@@ -20,6 +20,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import { getStudentLatestEmotion } from "../functions/query";
+import useAuth from "../hooks/useAuth";
 
 function a11yProps(index: number) {
     return {
@@ -28,16 +29,14 @@ function a11yProps(index: number) {
     };
 }
 
-interface StudentProps {
-    guardianId: string;
-}
-
-export default function Student(props: StudentProps) {
+export default function Student() {
     const { id } = useParams();
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
     const [latestEmotion, setLatestEmotion] = useState<string[]>([]);
+
+    const guardianId = useAuth().currentUser?.uid;
 
     useEffect(() => {
         const setStudentLatestEmotion = async () => {
@@ -64,7 +63,7 @@ export default function Student(props: StudentProps) {
 
     const deleteStudent = async () => {
         try {
-            await removeStudent(props.guardianId, id as string);
+            await removeStudent(guardianId as string, id as string);
         } catch (error) {
             alert(error)
         }
@@ -189,7 +188,7 @@ export default function Student(props: StudentProps) {
                         (() => {
                             switch (tabValue) {
                                 case 0:
-                                    return <Cards studentId={id as string} guardianId={props.guardianId as string} />
+                                    return <Cards studentId={id as string} />
                                 case 1:
                                     return <Notes />
                                 case 2:
