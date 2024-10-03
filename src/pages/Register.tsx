@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { SetStateAction, useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import speakBrightLogo from '../assets/SpeakBright_PL 3 CROP.png';
@@ -23,31 +23,41 @@ import { auth, secondaryAuth, secondaryDb } from '../config/firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Timestamp, doc, setDoc } from 'firebase/firestore'; // Import from Firebase
 import useAuth, { checkIfDocumentExists } from '../hooks/useAuth';
-import LoadingButton from '@mui/lab/LoadingButton';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 
 export default function Register() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, currentUserType } = useAuth();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [birthday, setBirthday] = useState<Timestamp | undefined>(undefined);
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [guardian, setGuardian] = useState(true);
+    const [inputUserType, setInputUserType] = useState("guardian");
 
     useEffect(() => {
         // Set default user type based on currentUser after loading
-        if (!loading && currentUser) {
-            setGuardian(false);
+        switch (currentUserType) {
+            case null:
+                setInputUserType("admin");
+                break;
+            case 'admin':
+                setInputUserType("guardian");
+                break;
+            case 'guardian':
+                setInputUserType("student");
+                break;
+            default:
+                setInputUserType("admin");
         }
-    }, [loading, currentUser, guardian]);
+    }, [currentUserType]);
 
-    const handleGuardian = () => {
-        setGuardian(!guardian);
+    const handleInputUserType = (userType: SetStateAction<string>) => {
+        console.log("input user type = " + userType);
+        setInputUserType(userType);
     };
     const handleClickShowPassword = () => setShowPassword((show) => !show);
     const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -104,28 +114,36 @@ export default function Register() {
                 email: email,
                 name: name,
                 userID: uid,
-                userType: guardian ? 'guardian' : 'student',
+                userType: inputUserType,
             }
 
             await setDoc(doc(secondaryDb, "users", uid), users_data);
-            if (guardian === true) {
-                if (secondaryAuth?.currentUser?.uid) {
-                    // Incase documentID != guardianID
-                    const doesDocumentExist: boolean = await checkIfDocumentExists("user_guardian", secondaryAuth.currentUser.uid, secondaryDb);
-                    if (doesDocumentExist)
-                        throw new Error("Document Exists!");
+            if (inputUserType === "admin") {
+                if (uid) {
+                    const adminDocRef = doc(secondaryDb, 'user_admin', uid);
+                    await setDoc(adminDocRef, users_data);
+                }
+            } else if (inputUserType === "guardian") {
+                if (uid && currentUser) {
                     await setDoc(doc(secondaryDb, "user_guardian", uid), users_data);
+
+                    // Add document in guardians subcollection located inside user_admin [user_admin > guardians > NEW_DOCUMENT]
+                    if (currentUserType === "admin") {
+                        const guardianDocRef = doc(secondaryDb, 'user_admin', currentUser.uid as string, 'guardians', uid);
+                        await setDoc(guardianDocRef, users_data);
+                    }
                 }
                 else
                     throw new Error('Authentication error!');
-            } else if (guardian === false) {
-                if (secondaryAuth?.currentUser?.uid && auth?.currentUser?.uid) {
-                    // Incase documentID != guardianID
-                    const doesDocumentExist: boolean = await checkIfDocumentExists("user_guardian", auth.currentUser.uid, secondaryDb);
+            } else if (inputUserType === "student") {
+                if (uid && currentUser) {
+                    // Incase guardian document does not exist
+                    const doesDocumentExist: boolean = await checkIfDocumentExists("user_guardian", currentUser.uid, secondaryDb);
                     if (!doesDocumentExist)
                         throw new Error("Guardian Document does not exist!");
+
                     // Reference to the specific student document within the student subcollection
-                    const studentDocRef = doc(secondaryDb, 'user_guardian', auth.currentUser.uid, 'students', secondaryAuth.currentUser.uid);
+                    const studentDocRef = doc(secondaryDb, 'user_guardian', currentUser.uid, 'students', uid);
                     await setDoc(studentDocRef, users_data);
                 }
                 else
@@ -172,49 +190,44 @@ export default function Register() {
                         }}
                     ></img>
                     <ButtonGroup variant="contained" aria-label="Basic button group" sx={{ width: '80%', marginBottom: '5px', }}>
-                        {loading ? (<LoadingButton loading
-                            variant="outlined"
-                            color="primary"
-                            sx={{
-                                backgroundColor: 'white',
-                                color: '#790377',
-                                borderColor: '#790377',
-                                '&:hover': {
-                                    backgroundColor: '#e0e0e0',
-                                    borderColor: '#6b0053',
-                                },
-                            }}
-                        >
-                            Loading...
-                        </LoadingButton>) :
-                            currentUser ? (<>
-                                <Button onClick={handleGuardian}
-                                    sx={{
-                                        flex: 1,
-                                        textAlign: 'center',
-                                        backgroundColor: guardian ? grey[200] : mainTheme.palette.primary.main,
-                                        color: guardian ? grey[900] : grey[50],
-
-                                    }}>Student
-                                </Button>
-                                <Button onClick={handleGuardian}
-                                    sx={{
-                                        flex: 1,
-                                        textAlign: 'center',
-                                        backgroundColor: !guardian ? grey[200] : mainTheme.palette.primary.main,
-                                        color: !guardian ? grey[900] : grey[50]
-                                    }}>Guardian
-                                </Button></>
-                            ) : (
-                                <Button
-                                    sx={{
-                                        flex: 1,
-                                        textAlign: 'center',
-                                        backgroundColor: !guardian ? grey[200] : mainTheme.palette.primary.main,
-                                        color: !guardian ? grey[900] : grey[50]
-                                    }}>Guardian
-                                </Button>
-                            )
+                        {(currentUserType === null) &&
+                            <Button onClick={() => handleInputUserType("admin")}
+                                sx={{
+                                    flex: 1,
+                                    textAlign: 'center',
+                                    backgroundColor: inputUserType === "admin" ? mainTheme.palette.primary.main : grey[200],
+                                    color: inputUserType === "admin" ? grey[50] : grey[900],
+                                    '&:hover': {
+                                        color: grey[50],
+                                    }
+                                }}>Admin
+                            </Button>
+                        }
+                        {(currentUserType === 'admin') &&
+                            <Button onClick={() => handleInputUserType("guardian")}
+                                sx={{
+                                    flex: 1,
+                                    textAlign: 'center',
+                                    backgroundColor: inputUserType === "guardian" ? mainTheme.palette.primary.main : grey[200],
+                                    color: inputUserType === "guardian" ? grey[50] : grey[900],
+                                    '&:hover': {
+                                        color: grey[50],
+                                    }
+                                }}>Guardian
+                            </Button>
+                        }
+                        {currentUserType === "guardian" &&
+                            <Button onClick={() => handleInputUserType("student")}
+                                sx={{
+                                    flex: 1,
+                                    textAlign: 'center',
+                                    backgroundColor: inputUserType === "student" ? mainTheme.palette.primary.main : grey[200],
+                                    color: inputUserType === "student" ? grey[50] : grey[900],
+                                    '&:hover': {
+                                        color: grey[50],
+                                    }
+                                }}>Student
+                            </Button>
                         }
                     </ButtonGroup>
 

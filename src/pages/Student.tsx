@@ -1,10 +1,12 @@
 import { useParams } from "react-router-dom";
-import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
+// import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
+import { getStudentInfo, removeStudent } from "../functions/query";
 import { useEffect, useState } from "react";
-import { collection, doc, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+// import { collection, doc, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { doc, DocumentData, onSnapshot } from "firebase/firestore";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import EmotionCard from "../components/EmotionCard";
+// import EmotionCard from "../components/EmotionCard";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import { ThemeProvider } from "@emotion/react";
@@ -19,7 +21,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
-import { getStudentLatestEmotion } from "../functions/query";
+// import { getStudentLatestEmotion } from "../functions/query";
 import useAuth from "../hooks/useAuth";
 import { db } from "../config/firebase";
 import StudentPrompt from "../components/StudentPrompt";
@@ -36,63 +38,49 @@ export default function Student() {
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
-    const [latestEmotion, setLatestEmotion] = useState<string[]>([]);
+    // const [latestEmotion, setLatestEmotion] = useState<string[]>([]);
     const [studentPrompts, setStudentPrompts] = useState({});
 
     const guardianId = useAuth().currentUser?.uid;
 
     // useEffect(() => {
-    //     const setStudentLatestEmotion = async () => {
+    //     const initializeStudentEmotions = async () => {
     //         try {
     //             await setEmotionDays(id as string);
-    //             const latestStudentEmotion = await getStudentLatestEmotion(id as string);
-    //             setLatestEmotion(latestStudentEmotion?.emotions || []);
     //         } catch (error) {
     //             alert(error);
     //         }
     //     };
 
-    //     setStudentLatestEmotion();
-    // }, [id, setLatestEmotion]);
+    //     initializeStudentEmotions();
+    // }, [id]);
 
-    useEffect(() => {
-        const initializeStudentEmotions = async () => {
-            try {
-                await setEmotionDays(id as string);
-            } catch (error) {
-                alert(error);
-            }
-        };
+    // useEffect(() => {
+    //     const emotionQuery = query(
+    //         collection(db, "emotions"),
+    //         where("userId", "==", id),
+    //         orderBy("date", "desc"),
+    //         limit(2)
+    //     );
 
-        initializeStudentEmotions();
-    }, [id]);
+    //     const unsubscribe = onSnapshot(emotionQuery, (emotionSnapshot) => {
+    //         if (!emotionSnapshot.empty) {
+    //             // Get the latest emotion document (adjust if needed)
+    //             const latestEmotionDoc = emotionSnapshot.docs.length > 1
+    //                 ? emotionSnapshot.docs[0] // Change this if you need second-to-last
+    //                 : emotionSnapshot.docs[0];
 
-    useEffect(() => {
-        const emotionQuery = query(
-            collection(db, "emotions"),
-            where("userId", "==", id),
-            orderBy("date", "desc"),
-            limit(2)
-        );
+    //             console.log("Real-time latestEmotionDoc:", latestEmotionDoc.data());
+    //             setLatestEmotion(latestEmotionDoc.data().emotions);
+    //         } else {
+    //             setLatestEmotion([]);
+    //         }
+    //     }, (error: Error) => {
+    //         console.error("Error fetching real-time emotions:", error);
+    //     });
 
-        const unsubscribe = onSnapshot(emotionQuery, (emotionSnapshot) => {
-            if (!emotionSnapshot.empty) {
-                // Get the latest emotion document (adjust if needed)
-                const latestEmotionDoc = emotionSnapshot.docs.length > 1
-                    ? emotionSnapshot.docs[0] // Change this if you need second-to-last
-                    : emotionSnapshot.docs[0];
-
-                console.log("Real-time latestEmotionDoc:", latestEmotionDoc.data());
-                setLatestEmotion(latestEmotionDoc.data().emotions);
-            } else {
-                setLatestEmotion([]);
-            }
-        }, (error: Error) => {
-            console.error("Error fetching real-time emotions:", error);
-        });
-
-        return () => unsubscribe();
-    }, [id]);
+    //     return () => unsubscribe();
+    // }, [id]);
 
     useEffect(() => {
         const documentRef = doc(db, 'prompt', id as string);
@@ -111,11 +99,6 @@ export default function Student() {
         // Clean up the subscription when the component unmounts or docId changes
         return () => unsubscribe();
     }, [id]);
-
-    useEffect(() => {
-        console.log(`latestEmotion changed: ${latestEmotion}`);
-    }, [latestEmotion]);
-
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -215,7 +198,7 @@ export default function Student() {
                         <StudentPrompt studentPrompts={studentPrompts} />
                     </Box>
 
-                    <EmotionCard emotions={latestEmotion || []} />
+                    {/* <EmotionCard emotions={latestEmotion || []} /> */}
                 </Box>
 
                 <Box display='flex' flexDirection='row' justifyContent='flex-start'

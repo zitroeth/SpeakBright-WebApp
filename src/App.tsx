@@ -9,6 +9,9 @@ import { default as Register } from './pages/Register';
 import { default as Student } from './pages/Student';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import AdminHome from './pages/AdminHome';
+import AdminViewGuardians from './pages/AdminViewGuardians';
+import AdminViewGuardianStudents from './pages/AdminViewGuardianStudents';
 
 function App() {
   return (
@@ -38,6 +41,21 @@ function App() {
                 <Student />
               </PrivateRoute>
             } />
+
+            <Route path="/Home/Admin/" element={
+              <PrivateRoute> {/* Redirects to login if not logged in */}
+                <AdminHome />
+                <AdminViewGuardians />
+              </PrivateRoute>
+            } />
+
+            <Route path="/Home/Admin/:guardianId" element={
+              <PrivateRoute> {/* Redirects to login if not logged in */}
+                <AdminHome />
+                <AdminViewGuardianStudents />
+              </PrivateRoute>
+            } />
+
 
           </Routes>
         </AuthProvider>

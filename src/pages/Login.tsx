@@ -17,10 +17,12 @@ import Typography from '@mui/material/Typography';
 import { Link } from 'react-router-dom';
 import { auth } from '../config/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { checkIfDocumentExists } from '../hooks/useAuth';
+import useAuth, { checkIfDocumentExists } from '../hooks/useAuth';
+import { getUserType } from '../functions/query';
 
 
 export default function Login() {
+    const { currentUser } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -33,9 +35,9 @@ export default function Login() {
     const signIn = async () => {
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            if (auth.currentUser?.uid) {
-                const isGuardian = await checkIfDocumentExists("user_guardian", auth.currentUser?.uid);
-                if (!isGuardian) {
+            if (currentUser?.uid) {
+                const userType = await getUserType(currentUser.uid);
+                if (userType === "student") {
                     signOut(auth);
                     throw new Error("Cannot use student login!");
                 }
@@ -58,9 +60,8 @@ export default function Login() {
                     flexWrap: 'wrap',
                     flex: '1 1 auto',
                     '& > :not(style)': {
-                        m: 1,
                         width: '35%',
-                        height: '70%',
+                        height: '75%',
                     },
                 }}
             >

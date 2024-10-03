@@ -9,10 +9,9 @@ import speakBrightLogo from '../assets/SpeakBright 1.png';
 import { signOut } from 'firebase/auth';
 import useAuth from '../hooks/useAuth';
 import { auth } from '../config/firebase';
-import LoadingButton from '@mui/lab/LoadingButton';
 
 export default function NavBar() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, currentUserType } = useAuth();
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -83,52 +82,6 @@ export default function NavBar() {
                                         Home
                                     </Typography>
                                 </IconButton>
-                                <IconButton
-                                    edge="start"
-                                    color="inherit"
-                                    aria-label="About"
-                                    href="/About"
-                                    sx={{
-                                        mr: 3,
-                                        "&.MuiButtonBase-root:hover": {
-                                            bgcolor: "transparent",
-                                            color: mainTheme.palette.secondary.light,
-                                        },
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h6"
-                                        component="div"
-                                        sx={{
-                                            textTransform: "capitalize",
-                                        }}
-                                    >
-                                        About
-                                    </Typography>
-                                </IconButton>
-                                <IconButton
-                                    edge="start"
-                                    color="inherit"
-                                    aria-label="Contact Us"
-                                    href="/Contact"
-                                    sx={{
-                                        mr: 3,
-                                        "&.MuiButtonBase-root:hover": {
-                                            bgcolor: "transparent",
-                                            color: mainTheme.palette.secondary.light,
-                                        },
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h6"
-                                        component="div"
-                                        sx={{
-                                            textTransform: "capitalize",
-                                        }}
-                                    >
-                                        Contact Us
-                                    </Typography>
-                                </IconButton>
                             </div>
 
                             <div style={{
@@ -151,11 +104,15 @@ export default function NavBar() {
                                         },
                                     }}>
                                     Register
+                                    {currentUserType === null && ' Admin'}
+                                    {currentUserType === 'admin' && ' Guardian'}
+                                    {currentUserType === 'guardian' && ' Student'}
                                 </Button>
-                                {loading ? (
-                                    <LoadingButton loading
+                                {currentUser ? (
+                                    <Button
                                         variant="outlined"
                                         color="primary"
+                                        onClick={handleLogout}
                                         sx={{
                                             backgroundColor: 'white',
                                             color: '#790377',
@@ -164,47 +121,27 @@ export default function NavBar() {
                                                 backgroundColor: '#e0e0e0',
                                                 borderColor: '#6b0053',
                                             },
-                                        }}
-                                    >
-                                        Loading...
-                                    </LoadingButton>) :
-                                    currentUser ? (
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            onClick={handleLogout}
-                                            sx={{
-                                                backgroundColor: 'white',
-                                                color: '#790377',
-                                                borderColor: '#790377',
-                                                '&:hover': {
-                                                    backgroundColor: '#e0e0e0',
-                                                    borderColor: '#6b0053',
-                                                },
-                                            }}>
-                                            Logout
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            href="/Login"
-                                            sx={{
-                                                backgroundColor: 'white',
-                                                color: '#790377',
-                                                borderColor: '#790377',
-                                                '&:hover': {
-                                                    backgroundColor: '#e0e0e0',
-                                                    borderColor: '#6b0053',
-                                                },
-                                            }}>
-                                            Login
-                                        </Button>
-                                    )
-                                }
-
+                                        }}>
+                                        Logout
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        href="/Login"
+                                        sx={{
+                                            backgroundColor: 'white',
+                                            color: '#790377',
+                                            borderColor: '#790377',
+                                            '&:hover': {
+                                                backgroundColor: '#e0e0e0',
+                                                borderColor: '#6b0053',
+                                            },
+                                        }}>
+                                        Login
+                                    </Button>
+                                )}
                             </div>
-
                         </div>
 
                     </Toolbar>

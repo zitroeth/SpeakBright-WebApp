@@ -35,13 +35,13 @@ export default function StudentPrompt({ studentPrompts }: StudentPromptProps) {
                 </Badge>
             </Tooltip>
 
-            <Tooltip title={<h2 style={{ color: "White" }}>Modeling Prompt</h2>}
+            <Tooltip title={<h2 style={{ color: "White" }}>Verbal Prompt</h2>}
                 followCursor
             >
-                <Badge badgeContent={studentPrompts.modeling || 0} color="primary">
+                <Badge badgeContent={studentPrompts.verbal || 0} color="primary">
                     <Avatar
-                        alt="Modeling Prompt"
-                        src={modelingPrompt}
+                        alt="Verbal Prompt"
+                        src={verbalPrompt}
                         sx={{
                             mx: '10px',
                             height: 'auto',
@@ -67,13 +67,13 @@ export default function StudentPrompt({ studentPrompts }: StudentPromptProps) {
                 </Badge>
             </Tooltip>
 
-            <Tooltip title={<h2 style={{ color: "White" }}>Verbal Prompt</h2>}
+            <Tooltip title={<h2 style={{ color: "White" }}>Modeling Prompt</h2>}
                 followCursor
             >
-                <Badge badgeContent={studentPrompts.verbal || 0} color="primary">
+                <Badge badgeContent={studentPrompts.modeling || 0} color="primary">
                     <Avatar
-                        alt="Verbal Prompt"
-                        src={verbalPrompt}
+                        alt="Modeling Prompt"
+                        src={modelingPrompt}
                         sx={{
                             mx: '10px',
                             height: 'auto',

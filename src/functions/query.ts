@@ -363,3 +363,85 @@ export async function getStudentLatestEmotion(studentId: string) {
         return null;
     }
 }
+
+export async function getUserType(uid: string) {
+    const q = query(collection(db, "users"), where("userID", "==", uid), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs[0].data().userType as string;
+}
+
+export async function getUserName(uid: string) {
+    const q = query(collection(db, "users"), where("userID", "==", uid), limit(1));
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs[0].data().name as string;
+}
+
+interface Guardian {
+    userID: string;
+    name: string;
+    email: string;
+    birthday: Timestamp;
+}
+
+export async function getGuardianList(adminId: string): Promise<Guardian[]> {
+    try {
+        const q = query(collection(db, "user_admin", adminId, "guardians"));
+
+        // Execute the query to get all documents in the 'guardians' subcollection
+        const querySnapshot = await getDocs(q);
+
+        // Map through the documents and extract the data
+        const guardianList = querySnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+                userID: data.userID as string,
+                name: data.name as string,
+                email: data.email as string,
+                birthday: data.birthday as Timestamp,
+            };
+        });
+
+        console.log(guardianList);
+        return guardianList;
+    } catch (error) {
+        alert(error);
+        return []; // Return an empty array in case of error
+    }
+}
+
+export async function removeGuardian(adminId: string, guardianId: string) {
+    try {
+        await deleteDoc(doc(db, "users", guardianId));
+        await deleteDoc(doc(db, "user_admin", adminId, "guardians", guardianId));
+    } catch (error) {
+        alert(error);
+    }
+}
+
+export async function getStudentsForTable(guardianId: string) {
+    try {
+        const q = query(collection(db, "user_guardian", guardianId, "students"));
+
+        // Execute the query to get all documents in the 'guardians' subcollection
+        const querySnapshot = await getDocs(q);
+
+        // Map through the documents and extract the data
+        const studentList = querySnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+                userID: data.userID as string,
+                name: data.name as string,
+                email: data.email as string,
+                birthday: data.birthday as Timestamp,
+            };
+        });
+
+        console.log(studentList);
+        return studentList;
+    } catch (error) {
+        alert(error);
+        return []; // Return an empty array in case of error
+    }
+}
