@@ -12,7 +12,6 @@ import { auth } from '../config/firebase';
 
 export default function NavBar() {
     const { currentUser, currentUserType } = useAuth();
-
     const handleLogout = async () => {
         await signOut(auth);
         window.location.href = '/Login';
@@ -63,7 +62,10 @@ export default function NavBar() {
                                     edge="start"
                                     color="inherit"
                                     aria-label=""
-                                    href="/"
+                                    href={
+                                        currentUserType === 'admin' ? '/Home/Admin' :
+                                            '/'
+                                    }
                                     sx={{
                                         mr: 3,
                                         "&.MuiButtonBase-root:hover": {
@@ -82,6 +84,35 @@ export default function NavBar() {
                                         Home
                                     </Typography>
                                 </IconButton>
+                                {currentUserType === 'guardian' &&
+                                    (<>
+                                        <IconButton
+                                            id='navbar-analytics-button'
+                                            edge="start"
+                                            color="inherit"
+                                            aria-label=""
+                                            href={`/Home/Analytics/`}
+                                            sx={{
+                                                mr: 3,
+                                                "&.MuiButtonBase-root:hover": {
+                                                    bgcolor: "transparent",
+                                                    color: mainTheme.palette.secondary.light,
+                                                },
+                                                visibility: 'hidden'
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h6"
+                                                component="div"
+                                                sx={{
+                                                    textTransform: "capitalize",
+                                                }}
+                                            >
+                                                Analytics
+                                            </Typography>
+                                        </IconButton>
+                                    </>)}
+
                             </div>
 
                             <div style={{

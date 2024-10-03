@@ -34,7 +34,7 @@ function a11yProps(index: number) {
 }
 
 export default function Student() {
-    const { id } = useParams();
+    const { studentId } = useParams();
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
     const [tabValue, setTabValue] = useState(0);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
@@ -83,7 +83,7 @@ export default function Student() {
     // }, [id]);
 
     useEffect(() => {
-        const documentRef = doc(db, 'prompt', id as string);
+        const documentRef = doc(db, 'prompt', studentId as string);
 
         const unsubscribe = onSnapshot(documentRef, (docSnapshot) => {
             if (docSnapshot.exists()) {
@@ -98,7 +98,7 @@ export default function Student() {
 
         // Clean up the subscription when the component unmounts or docId changes
         return () => unsubscribe();
-    }, [id]);
+    }, [studentId]);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -106,7 +106,7 @@ export default function Student() {
 
     const deleteStudent = async () => {
         try {
-            await removeStudent(guardianId as string, id as string);
+            await removeStudent(guardianId as string, studentId as string);
         } catch (error) {
             alert(error)
         }
@@ -116,20 +116,35 @@ export default function Student() {
     useEffect(() => {
         const fetchStudentInfo = async () => {
             try {
-                const studInfo = await getStudentInfo(id as string);
+                const studInfo = await getStudentInfo(studentId as string);
                 setStudentInfo(studInfo);
             } catch (error) {
                 alert(error);
             }
         };
 
-        if (id) {
+        if (studentId) {
             fetchStudentInfo();
         } else {
             alert("No student ID provided");
         }
 
-    }, [id]);
+    }, [studentId]);
+
+
+    function changeLink() {
+        // Select the anchor element by its ID
+        const linkElement = document.getElementById('navbar-analytics-button');
+
+        // Change the href dynamically
+        if (linkElement) {
+            linkElement.href = `/Home/Analytics/${studentId}`;
+            linkElement.style.visibility = 'visible';
+        }
+
+    }
+
+    changeLink();
 
     return (
         <ThemeProvider theme={mainTheme}>
@@ -141,7 +156,7 @@ export default function Student() {
                 aria-describedby="alert-dialog-description"
             >
                 <DialogTitle id="alert-dialog-title">
-                    <b>{`Delete Student: ${id}`}</b>
+                    <b>{`Delete Student: ${studentId}`}</b>
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="alert-dialog-description">
@@ -242,7 +257,7 @@ export default function Student() {
                         (() => {
                             switch (tabValue) {
                                 case 0:
-                                    return <Cards studentId={id as string} />
+                                    return <Cards studentId={studentId as string} />
                                 case 1:
                                     return <Notes />
                                 case 2:

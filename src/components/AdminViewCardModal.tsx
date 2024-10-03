@@ -39,9 +39,6 @@ interface AdminViewCardModalProps {
     studentId: string,
 }
 
-type CategoryType = {
-    category: string
-};
 
 export default function AdminViewCardModal({ open, handleClose, studentId }: AdminViewCardModalProps) {
     const [categories, setCategories] = useState<Map<string, object> | null>(null);

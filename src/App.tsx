@@ -1,6 +1,6 @@
 import './App.css'
 import NavBar from './components/NavBar'
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { default as Home } from './pages/Home';
@@ -12,6 +12,7 @@ import PrivateRoute from './components/PrivateRoute';
 import AdminHome from './pages/AdminHome';
 import AdminViewGuardians from './pages/AdminViewGuardians';
 import AdminViewGuardianStudents from './pages/AdminViewGuardianStudents';
+import StudentAnalytics from './pages/StudentAnalytics';
 
 function App() {
   return (
@@ -36,9 +37,15 @@ function App() {
               </PrivateRoute>
             } />
 
-            <Route path="/Home/:id" element={
+            <Route path="/Home/:studentId" element={
               <PrivateRoute> {/* Redirects to login if not logged in */}
                 <Student />
+              </PrivateRoute>
+            } />
+
+            <Route path="/Home/Analytics/:studentId" element={
+              <PrivateRoute> {/* Redirects to login if not logged in */}
+                <StudentAnalytics />
               </PrivateRoute>
             } />
 
