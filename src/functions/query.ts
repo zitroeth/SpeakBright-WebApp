@@ -14,14 +14,45 @@ export async function getStudents(guardianId: string) {
     return studentsMap;
 }
 
-export async function getStudentInfo(studentId: string) {
+interface StudentInfo {
+    birthday: Timestamp;
+    email: string;
+    name: string;
+    phase?: number;
+    userID: string;
+    userType: string;
+}
+
+// export async function getStudentInfo(studentId: string) {
+//     const docSnap = await getDoc(doc(db, "users", studentId));
+//     let studentInfo = null;
+//     if (docSnap.exists()) {
+//         studentInfo = docSnap.data();
+//     } else {
+//         throw new Error("No student found!");
+//     }
+
+//     return studentInfo;
+// }
+
+export async function getStudentInfo(studentId: string): Promise<StudentInfo> {
     const docSnap = await getDoc(doc(db, "users", studentId));
-    let studentInfo = null;
-    if (docSnap.exists()) {
-        studentInfo = docSnap.data();
-    } else {
+
+    if (!docSnap.exists()) {
         throw new Error("No student found!");
     }
+
+    const data = docSnap.data();
+
+    // Construct the StudentInfo object with appropriate types
+    const studentInfo: StudentInfo = {
+        birthday: data.birthday as Timestamp,
+        email: data.email as string,
+        name: data.name as string,
+        phase: data.phase ? (data.phase as number) : undefined,
+        userID: data.userID as string,
+        userType: data.userType as string,
+    };
 
     return studentInfo;
 }
@@ -443,5 +474,94 @@ export async function getStudentsForTable(guardianId: string) {
     } catch (error) {
         alert(error);
         return []; // Return an empty array in case of error
+    }
+}
+
+interface ChartData {
+    dateArray: string[];
+    gesturalArray: number[];
+    independentArray: number[];
+    modelingArray: number[];
+    physicalArray: number[];
+    verbalArray: number[];
+}
+
+export async function getStudentPromptData(studentId: string, studentPhase: string): Promise<ChartData> {
+    try {
+        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`));
+
+        const sessionSnapshot = await getDocs(sessionQuery);
+
+        const dailyData: {
+            [date: string]: {
+                gestural: number, independent: number, modeling: number, physical: number, verbal: number
+            }
+        } = {};
+
+        for (const sessionDoc of sessionSnapshot.docs) {
+            const sessionData = sessionDoc.data();
+            const sessionDate = (sessionData.timestamp as Timestamp).toDate().toISOString().split('T')[0]; // Format "YYYY-MM-DD"
+
+            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`, sessionDoc.id, `trialPrompt`));
+            const trialSnapshot = await getDocs(trialPromptQuery);
+
+            trialSnapshot.forEach((trialDoc) => {
+                const trialData = trialDoc.data();
+                const { Gestural, Independent, Modeling, Physical, Verbal } = trialData;
+
+                if (!dailyData[sessionDate]) {
+                    dailyData[sessionDate] = {
+                        gestural: 0,
+                        independent: 0,
+                        modeling: 0,
+                        physical: 0,
+                        verbal: 0,
+                    };
+                }
+
+                // Add values for the day
+                dailyData[sessionDate].gestural += Gestural || 0;
+                dailyData[sessionDate].independent += Independent || 0;
+                dailyData[sessionDate].modeling += Modeling || 0;
+                dailyData[sessionDate].physical += Physical || 0;
+                dailyData[sessionDate].verbal += Verbal || 0;
+            });
+        }
+
+        // Prepare arrays for the chart
+        const dateArray: string[] = [];
+        const gesturalArray: number[] = [];
+        const independentArray: number[] = [];
+        const modelingArray: number[] = [];
+        const physicalArray: number[] = [];
+        const verbalArray: number[] = [];
+
+        Object.keys(dailyData).forEach(date => {
+            dateArray.push(date);
+            gesturalArray.push(dailyData[date].gestural);
+            independentArray.push(dailyData[date].independent);
+            modelingArray.push(dailyData[date].modeling);
+            physicalArray.push(dailyData[date].physical);
+            verbalArray.push(dailyData[date].verbal);
+        });
+
+        return {
+            dateArray,
+            gesturalArray,
+            independentArray,
+            modelingArray,
+            physicalArray,
+            verbalArray,
+        };
+    } catch (error) {
+        console.error(error);
+        return {
+            dateArray: [],
+            gesturalArray: [],
+            independentArray: [],
+            modelingArray: [],
+            physicalArray: [],
+            verbalArray: [],
+        };
     }
 }

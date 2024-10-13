@@ -48,6 +48,7 @@ export default function GuardianTable({ guardians }: GuardianTableProps) {
         try {
             await removeGuardian(currentUser?.uid as string, guardianId)
             alert(`Guardian: ${deleteGuardianModal.guardianName} has been removed successfully!`);
+            location.reload();
         } catch (error) {
             alert(error);
         } finally {

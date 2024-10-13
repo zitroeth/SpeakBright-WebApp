@@ -1,28 +1,60 @@
 import Typography from '@mui/material/Typography';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { useEffect, useState } from 'react';
-import { getUserName } from '../functions/query';
+import { getStudentInfo, getStudentPromptData } from '../functions/query';
 import { useParams } from 'react-router-dom';
 import { LineChart, PieChart } from '@mui/x-charts';
 import { Box } from '@mui/material';
 import { Gauge } from '@mui/x-charts/Gauge';
+import { Timestamp } from 'firebase/firestore';
+
+interface StudentInfo {
+    birthday: Timestamp;
+    email: string;
+    name: string;
+    phase?: number;
+    userID: string;
+    userType: string;
+}
+
+interface ChartData {
+    dateArray: string[];
+    gesturalArray: number[];
+    independentArray: number[];
+    modelingArray: number[];
+    physicalArray: number[];
+    verbalArray: number[];
+}
 
 export default function StudentAnalytics() {
     const { studentId } = useParams();
-    const [studentName, setStudentName] = useState("")
+    const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null)
+    const [studentPromptsData, setStudentPromptsData] = useState<ChartData | null>(null)
 
     useEffect(() => {
         const fetchStudentName = async () => {
             try {
-                const newStudentName = await getUserName(studentId as string);
-                setStudentName(newStudentName);
+                const newStudentInfo = await getStudentInfo(studentId as string);
+                setStudentInfo(newStudentInfo);
             } catch (error) {
-                console.error("Error fetching student name:", error);
+                console.error("Error fetching student info:", error);
+            }
+        };
+
+        const fetchStudentPromptData = async () => {
+            try {
+                const newStudentPrompts = await getStudentPromptData(studentId as string, String(studentInfo?.phase));
+                setStudentPromptsData(newStudentPrompts);
+                console.log("testNewStudent")
+                console.log(newStudentPrompts)
+            } catch (error) {
+                console.error("Error fetching student prompts:", error);
             }
         };
 
         fetchStudentName();
-    }, [studentId]);
+        fetchStudentPromptData();
+    }, [studentId, studentInfo?.phase]);
 
 
     function generateDateArray(startDate: string, endDate: string) {
@@ -38,7 +70,6 @@ export default function StudentAnalytics() {
         return dates;
     }
     const dateArray = generateDateArray('2024-10-01', '2024-10-30');
-    console.log(dateArray);
 
     function generateRandomNumbers(low: number, high: number, subtractValue: number = 0): number[] {
         const randomNumbers: number[] = [];
@@ -104,11 +135,25 @@ export default function StudentAnalytics() {
         return totalSum; // Return the total weighted sum
     }
 
+    function changeLink() {
+        // Select the anchor element by its ID
+        const linkElement = document.getElementById('navbar-analytics-button');
+
+        // Change the href dynamically
+        if (linkElement) {
+            linkElement.href = `/Home/Analytics/${studentId}`;
+            linkElement.style.visibility = 'visible';
+        }
+
+    }
+
+    changeLink();
+
     return (
         <Box sx={{
         }}>
-            <Typography variant='h5' component='h5'>{`${studentName}'s Analytics`}</Typography>
-            <BarChart
+            <Typography variant='h5' component='h5'>{`${studentInfo?.name}'s Analytics`}</Typography>
+            {/* <BarChart
                 xAxis={[{ scaleType: 'band', data: dateArray }]}
                 series={[
                     { data: physicalArray, label: 'Physical', stack: 'all' },
@@ -119,9 +164,9 @@ export default function StudentAnalytics() {
                 ]}
                 height={500}
                 barLabel="value"
-            />
+            /> */}
 
-            <LineChart
+            {/* <LineChart
                 xAxis={[{ scaleType: 'band', data: dateArray }]}
                 series={[
                     { data: physicalArray, label: 'Physical', area: true, stack: 'all' },
@@ -132,7 +177,36 @@ export default function StudentAnalytics() {
                 ]}
                 height={500}
 
+            /> */}
+
+            {studentPromptsData ?
+                <LineChart
+                    xAxis={[{ scaleType: 'band', data: studentPromptsData?.dateArray }]}
+                    series={[
+                        { data: studentPromptsData?.physicalArray, label: 'Physical', },
+                        { data: studentPromptsData?.modelingArray, label: 'Modeling', },
+                        { data: studentPromptsData?.gesturalArray, label: 'Gestural', },
+                        { data: studentPromptsData?.verbalArray, label: 'Verbal', },
+                        { data: studentPromptsData?.independentArray, label: 'Independent', },
+                    ]}
+                    height={500}
+                    grid={{ vertical: true, horizontal: true }}
+                /> :
+                <Typography>{"Loading..."}</Typography>
+            }
+
+            <LineChart
+                xAxis={[{ scaleType: 'band', data: dateArray }]}
+                series={[
+                    { data: physicalArray, label: 'Physical', },
+                    { data: modellingArray, label: 'Modeling', },
+                    { data: gesturalArray, label: 'Gestural', },
+                    { data: verbalArray, label: 'Verbal', },
+                    { data: independentArray, label: 'Independent', },
+                ]}
+                height={500}
             />
+
             <PieChart
                 series={[
                     {
