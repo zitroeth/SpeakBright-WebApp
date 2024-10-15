@@ -565,3 +565,42 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
         };
     }
 }
+
+interface SessionInfo {
+    sessionID: string;
+    sessionTime: Timestamp;
+}
+
+interface TappedCard {
+    id: string;
+    cardTitle: string;
+    category: string;
+    timeTapped: Timestamp;
+}
+
+export const fetchRecentSessionWithTappedCards = async (userId: string): Promise<{ session: SessionInfo | null; tappedCards: TappedCard[] }> => {
+    // Fetch the most recent session
+    const sessionsRef = collection(db, `card_basket/${userId}/sessions`);
+    const q = query(sessionsRef, orderBy("sessionTime", "desc"), limit(1));
+    const sessionSnapshot = await getDocs(q);
+
+    if (!sessionSnapshot.empty) {
+        const recentSessionDoc = sessionSnapshot.docs[0];
+        const sessionInfo: SessionInfo = {
+            sessionID: recentSessionDoc.data().sessionID as string,
+            sessionTime: recentSessionDoc.data().sessionTime as Timestamp,
+        };
+
+        // Fetch the tapped cards for this session
+        const tappedCardsRef = collection(db, `card_basket/${userId}/sessions/${recentSessionDoc.id}/cardsTapped`);
+        const cardsSnapshot = await getDocs(tappedCardsRef);
+        const tappedCards = cardsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        })) as TappedCard[];
+
+        return { session: sessionInfo, tappedCards };
+    }
+
+    return { session: null, tappedCards: [] }; // No sessions found
+};
