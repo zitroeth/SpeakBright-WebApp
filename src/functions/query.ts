@@ -507,7 +507,7 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
 
             trialSnapshot.forEach((trialDoc) => {
                 const trialData = trialDoc.data();
-                const { Gestural, Independent, Modeling, Physical, Verbal } = trialData;
+                const { prompt } = trialData as { prompt: string };
 
                 if (!dailyData[sessionDate]) {
                     dailyData[sessionDate] = {
@@ -519,12 +519,26 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
                     };
                 }
 
-                // Add values for the day
-                dailyData[sessionDate].gestural += Gestural || 0;
-                dailyData[sessionDate].independent += Independent || 0;
-                dailyData[sessionDate].modeling += Modeling || 0;
-                dailyData[sessionDate].physical += Physical || 0;
-                dailyData[sessionDate].verbal += Verbal || 0;
+                switch (prompt) {
+                    case "Gestural":
+                        dailyData[sessionDate].gestural += 1;
+                        break;
+                    case "Independent":
+                        dailyData[sessionDate].independent += 1;
+                        break;
+                    case "Modeling":
+                        dailyData[sessionDate].modeling += 1;
+                        break;
+                    case "Physical":
+                        dailyData[sessionDate].physical += 1;
+                        break;
+                    case "Verbal":
+                        dailyData[sessionDate].verbal += 1;
+                        break;
+                    default:
+                        break;
+                }
+
             });
         }
 

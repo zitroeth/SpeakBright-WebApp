@@ -134,7 +134,7 @@ export default function Student() {
 
     function changeLink() {
         // Select the anchor element by its ID
-        const linkElement = document.getElementById('navbar-analytics-button');
+        const linkElement = document.getElementById('navbar-analytics-button') as HTMLLinkElement;
 
         // Change the href dynamically
         if (linkElement) {

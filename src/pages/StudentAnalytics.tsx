@@ -141,7 +141,7 @@ export default function StudentAnalytics() {
     }
 
     const percentagesData = calculatePercentages(inputArrays);
-    const valueFormatter = (item: { value: number }) => `${item.value}%`;
+    const valueFormatter = (item: { value: number }) => { return item.value === 0 ? `` : `${item.value}%` };
 
     function calculateWeightedSum(inputArrays: { [key: string]: number[] }): number {
         // Define the weights for each category
@@ -178,11 +178,10 @@ export default function StudentAnalytics() {
         return { titles, dataValues };
     };
     const barGraphData = recentSessionData ? prepareBarGraphData(recentSessionData.tappedCards) : { titles: [], dataValues: [] };
-    console.log(barGraphData.dataValues)
-    console.log(barGraphData.titles)
+
     function changeLink() {
         // Select the anchor element by its ID
-        const linkElement = document.getElementById('navbar-analytics-button');
+        const linkElement = document.getElementById('navbar-analytics-button') as HTMLLinkElement;
 
         // Change the href dynamically
         if (linkElement) {
@@ -256,8 +255,8 @@ export default function StudentAnalytics() {
                                         data: percentagesData,
                                         highlightScope: { fade: 'global', highlight: 'item' },
                                         faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
-                                        arcLabel: valueFormatter,
                                         valueFormatter,
+                                        arcLabel: valueFormatter,
                                     },
                                 ]}
                                 height={160} width={400}
