@@ -1,12 +1,13 @@
 import Typography from '@mui/material/Typography';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { useEffect, useState } from 'react';
-import { fetchRecentSessionWithTappedCards, getStudentInfo, getStudentPromptData } from '../functions/query';
+import { fetchRecentSessionWithTappedCards, getIndependentCardIds, getStudentInfo, getStudentPromptData } from '../functions/query';
 import { useParams } from 'react-router-dom';
 import { LineChart, PieChart } from '@mui/x-charts';
 import { Box, Card, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent } from '@mui/material';
 import { Timestamp } from 'firebase/firestore';
-import Grid from '@mui/material/Unstable_Grid2';
+import IndependentCards from '../components/IndependentCards';
+
 interface StudentInfo {
     birthday: Timestamp;
     email: string;
@@ -45,6 +46,7 @@ export default function StudentAnalytics() {
     const [studentPromptsData, setStudentPromptsData] = useState<ChartData | null>(null)
     const [recentSessionData, setRecentSessionData] = useState<{ session: SessionInfo, tappedCards: TappedCard[] } | null>(null);
     const [promptFilter, setPromptFilter] = useState("Daily");
+    const [independentCardIds, setIndependentCardIds] = useState<string[]>([]);
 
     const handlePromptFilterChange = (event: SelectChangeEvent) => {
         setPromptFilter(event.target.value as string);
@@ -64,8 +66,8 @@ export default function StudentAnalytics() {
             try {
                 const newStudentPrompts = await getStudentPromptData(studentId as string, String(studentInfo?.phase), promptFilter);
                 setStudentPromptsData(newStudentPrompts);
-                console.log("testNewStudent")
-                console.log(newStudentPrompts)
+                // console.log("testNewStudent")
+                // console.log(newStudentPrompts)
             } catch (error) {
                 console.error("Error fetching student prompts:", error);
             }
@@ -76,9 +78,17 @@ export default function StudentAnalytics() {
             setRecentSessionData({ session: recentSessionData.session as SessionInfo, tappedCards: recentSessionData.tappedCards });
         };
 
+        const fetchIndependentCardIds = async () => {
+            const fetchedIndependentCardIds = await getIndependentCardIds(studentId as string, String(studentInfo?.phase));
+            setIndependentCardIds(fetchedIndependentCardIds);
+            // console.log('independent')
+            // console.log(independentCardIds)
+        };
+
         fetchStudentName();
         fetchStudentPromptData();
         fetchRecentSessionData();
+        fetchIndependentCardIds();
     }, [studentId, studentInfo?.phase, promptFilter]);
 
     const inputArrays =
@@ -134,7 +144,7 @@ export default function StudentAnalytics() {
 
     return (
         <Box sx={{
-            m: 5,
+            m: 6,
         }}>
 
             <Typography variant='h3' component='h3'>{`${studentInfo?.name}'s Analytics Overview`}</Typography>
@@ -252,15 +262,38 @@ export default function StudentAnalytics() {
 
                     </Card>
 
-                    {/* <Card
-                        elevation={4}
+                    <Box gap={3}
                         sx={{
                             mt: 3,
-                            p: 1,
+                            display: 'flex',
+                            flexWrap: 'wrap',
                         }}>
-                        <Typography variant='h4' component='h4' mt={2} ml={2}>Card Independence</Typography>
 
-                    </Card> */}
+                        <Card
+                            elevation={4}
+                            sx={{
+                                my: 3,
+                                p: 1,
+                                minHeight: '400px',
+                                flex: '3 3',
+                            }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }} mt={2} mx={2}>
+                                <Typography variant='h4' component='h4'>Independent Cards</Typography>
+                                <IndependentCards studentId={studentId as string} cardIds={independentCardIds} />
+                            </Box>
+                        </Card>
+
+                        <Card
+                            elevation={4}
+                            sx={{
+                                my: 3,
+                                p: 1,
+                                minHeight: '400px',
+                                flex: '2 2',
+                            }}>
+                        </Card>
+                    </Box>
+
                 </>
                 :
                 <Typography>{"Loading..."}</Typography>

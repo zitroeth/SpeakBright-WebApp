@@ -59,9 +59,9 @@ export async function getStudentInfo(studentId: string): Promise<StudentInfo> {
 
 export async function getCardCategories() {
     const querySnapshot = await getDocs(collection(db, "categories"));
-    const categoriesMap = new Map();
+    const categoriesMap = new Map<string, { category: string }>();
     querySnapshot.forEach(doc => {
-        categoriesMap.set(doc.id, doc.data());
+        categoriesMap.set(doc.id as string, doc.data() as { category: string });
     });
 
     return categoriesMap;
@@ -488,7 +488,7 @@ interface ChartData {
 
 export async function getStudentPromptData(studentId: string, studentPhase: string, filterType: string): Promise<ChartData> {
     try {
-        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, '2', `session`));
+        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`));
 
         const sessionSnapshot = await getDocs(sessionQuery);
 
@@ -502,7 +502,7 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
             const sessionData = sessionDoc.data();
             const sessionDate = (sessionData.timestamp as Timestamp).toDate(); // Convert to Date object
 
-            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, '2', `session`, sessionDoc.id, `trialPrompt`));
+            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`, sessionDoc.id, `trialPrompt`));
             const trialSnapshot = await getDocs(trialPromptQuery);
 
             trialSnapshot.forEach((trialDoc) => {
@@ -648,3 +648,76 @@ export const fetchRecentSessionWithTappedCards = async (userId: string): Promise
 
     return { session: null, tappedCards: [] }; // No sessions found
 };
+
+export async function getIndependentCardIds(studentId: string, studentPhase: string, minIndependentPercentage: number = 70) {
+    // Step 1: Fetch all sessions for the user
+    const sessionsRef = collection(db, `activity_log/${studentId}/phase/${studentPhase}/session`);
+    const sessionQuery = query(sessionsRef, orderBy("timestamp", "desc"));
+    const sessionSnapshots = await getDocs(sessionQuery);
+    const cardSessionData: { [cardID: string]: { sessionId: string; independentCount: number; totalCount: number; timestamp: Timestamp }[] } = {};
+
+    // Step 2: Iterate through sessions to process trialPrompts
+    for (const session of sessionSnapshots.docs) {
+        const sessionData = session.data();
+        const trialPromptsRef = collection(db, `activity_log/${studentId}/phase/${studentPhase}/session/${session.id}/trialPrompt`);
+        const trialPromptSnapshots = await getDocs(trialPromptsRef);
+
+        // Step 3: Track Independent prompts and total prompts per cardID for each session
+        trialPromptSnapshots.forEach((trialPromptDoc) => {
+            const { cardID, prompt } = trialPromptDoc.data();
+            if (!cardSessionData[cardID]) {
+                cardSessionData[cardID] = [];
+            }
+
+            let sessionInfo = cardSessionData[cardID].find(s => s.sessionId === session.id);
+
+            if (!sessionInfo) {
+                sessionInfo = { sessionId: session.id, independentCount: 0, totalCount: 0, timestamp: sessionData.timestamp };
+                cardSessionData[cardID].push(sessionInfo);
+            }
+
+            sessionInfo.totalCount += 1;
+            if (prompt === "Independent") {
+                sessionInfo.independentCount += 1;
+            }
+        });
+    }
+
+    // Step 4: Filter cards by the 3 most recent sessions with at least 70% Independent prompts
+    const resultCardIDs = Object.keys(cardSessionData).filter((cardID) => {
+        console.log(cardID)
+        // Sort by session timestamp (most recent first)
+        const sortedSessions = cardSessionData[cardID].sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
+
+        // Take the 3 most recent sessions
+        const recentSessions = sortedSessions.slice(0, 3);
+
+        // Calculate total Independent count and total prompt count across the 3 most recent sessions
+        const totalIndependent = recentSessions.reduce((sum, session) => sum + session.independentCount, 0);
+        const totalPrompts = recentSessions.reduce((sum, session) => sum + session.totalCount, 0);
+
+        // Calculate percentage of Independent prompts
+        const independentPercentage = (totalIndependent / totalPrompts) * 100;
+
+        // Return true if Independent percentage is >= 70%
+        return independentPercentage >= minIndependentPercentage;
+    });
+
+    return resultCardIDs;
+}
+
+// for (let i = 1; i <= 10; i++) {
+//     console.log(`total: ${i}\nneed: ${Math.ceil((i * 0.7).toFixed(1))}\n`);
+// }
+
+export async function getStudentCardsUsingIds(studentId: string, cardIds: string[]) {
+    const cardQuery = await query(collection(db, "cards"), where("userId", "==", studentId));
+    const cardSnapshot = await getDocs(cardQuery);
+    const cardMap = new Map<string, { category: string, imageUrl: string, tapCount: number, title: string, userId: string }>();
+    cardSnapshot.forEach(doc => {
+        if (cardIds.includes(doc.id as string))
+            cardMap.set(doc.id as string, doc.data() as { category: string, imageUrl: string, tapCount: number, title: string, userId: string });
+    });
+
+    return cardMap;
+}

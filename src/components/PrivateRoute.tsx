@@ -9,7 +9,7 @@ interface PrivateRouteProps {
 
 export default function PrivateRoute({ children, redirectLink = '/Login' }: PrivateRouteProps) {
     const { currentUser } = useAuth();
-    console.log("currentUser\n")
-    console.log(currentUser)
+    // console.log("currentUser\n")
+    // console.log(currentUser)
     return currentUser ? children : <Navigate to={redirectLink} />;
 }
