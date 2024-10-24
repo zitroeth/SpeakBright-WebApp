@@ -486,9 +486,9 @@ interface ChartData {
     verbalArray: number[];
 }
 
-export async function getStudentPromptData(studentId: string, studentPhase: string): Promise<ChartData> {
+export async function getStudentPromptData(studentId: string, studentPhase: string, filterType: string): Promise<ChartData> {
     try {
-        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`));
+        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, '2', `session`));
 
         const sessionSnapshot = await getDocs(sessionQuery);
 
@@ -500,17 +500,48 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
 
         for (const sessionDoc of sessionSnapshot.docs) {
             const sessionData = sessionDoc.data();
-            const sessionDate = (sessionData.timestamp as Timestamp).toDate().toISOString().split('T')[0]; // Format "YYYY-MM-DD"
+            const sessionDate = (sessionData.timestamp as Timestamp).toDate(); // Convert to Date object
 
-            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`, sessionDoc.id, `trialPrompt`));
+            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, '2', `session`, sessionDoc.id, `trialPrompt`));
             const trialSnapshot = await getDocs(trialPromptQuery);
 
             trialSnapshot.forEach((trialDoc) => {
                 const trialData = trialDoc.data();
                 const { prompt } = trialData as { prompt: string };
 
-                if (!dailyData[sessionDate]) {
-                    dailyData[sessionDate] = {
+                // Format the session date based on the filter type
+                let formattedDate: string;
+                switch (filterType) {
+                    case 'Daily': {
+                        formattedDate = sessionDate.toLocaleDateString();
+                        break;
+                    }
+                    case 'Weekly': {
+                        const weekStart = new Date(sessionDate);
+                        weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
+
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+
+                        console.log(sessionDate)
+                        console.log(`start: ${weekStart} \nend: ${weekEnd}`)
+
+                        formattedDate = `${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
+                        break;
+                    }
+                    case 'Monthly': {
+                        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                        formattedDate = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
+                        break;
+                    }
+                    default: {
+                        formattedDate = sessionDate.toISOString().split('T')[0]; // Default to day
+                        break;
+                    }
+                }
+
+                if (!dailyData[formattedDate]) {
+                    dailyData[formattedDate] = {
                         gestural: 0,
                         independent: 0,
                         modeling: 0,
@@ -521,24 +552,23 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
 
                 switch (prompt) {
                     case "Gestural":
-                        dailyData[sessionDate].gestural += 1;
+                        dailyData[formattedDate].gestural += 1;
                         break;
                     case "Independent":
-                        dailyData[sessionDate].independent += 1;
+                        dailyData[formattedDate].independent += 1;
                         break;
                     case "Modeling":
-                        dailyData[sessionDate].modeling += 1;
+                        dailyData[formattedDate].modeling += 1;
                         break;
                     case "Physical":
-                        dailyData[sessionDate].physical += 1;
+                        dailyData[formattedDate].physical += 1;
                         break;
                     case "Verbal":
-                        dailyData[sessionDate].verbal += 1;
+                        dailyData[formattedDate].verbal += 1;
                         break;
                     default:
                         break;
                 }
-
             });
         }
 
