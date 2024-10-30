@@ -283,7 +283,7 @@ export default function StudentAnalytics() {
                             </Box>
                         </Card>
 
-                        <Card
+                        {/* <Card
                             elevation={4}
                             sx={{
                                 my: 3,
@@ -291,7 +291,7 @@ export default function StudentAnalytics() {
                                 minHeight: '400px',
                                 flex: '2 2',
                             }}>
-                        </Card>
+                        </Card> */}
                     </Box>
 
                 </>
