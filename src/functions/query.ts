@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc, getDocsFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc, getDocsFromServer, getCountFromServer } from 'firebase/firestore';
 import { getDownloadURL, ref, StorageReference, uploadBytes } from "firebase/storage";
 import { storage, db, auth } from '../config/firebase';
 import { adminAuth } from '../config/admin';
@@ -80,11 +80,19 @@ export async function setImage(imageId: string, image: Blob) {
     return storageRef;
 }
 
-export async function setCard(card_data: object, cardRef?: StorageReference) {
+export async function setCard(
+    card_data: {
+        category: string,
+        imageUrl?: string,
+        tapCount: number,
+        title: string,
+        userId: string,
+    },
+    cardRef?: StorageReference) {
     try {
         // If manual card input
-        if (card_data.imageUrl.length === 0) {
-            const downloadURL = await getDownloadURL(cardRef);
+        if (card_data.imageUrl === undefined) {
+            const downloadURL = await getDownloadURL(cardRef as StorageReference);
             card_data.imageUrl = downloadURL;
         }
 
@@ -144,7 +152,12 @@ export async function getImages() {
 
 export async function removeCard(cardId: string) {
     try {
+        const cardDoc = await getDoc(doc(db, "cards", cardId));
         await deleteDoc(doc(db, "cards", cardId));
+
+        if (cardDoc.get("isFavorite")) {
+            await deleteDoc(doc(db, "favorites", cardDoc.get("userId"), "cards", cardId));
+        }
     } catch (error) {
         alert(error);
     }
@@ -164,7 +177,14 @@ export async function removeStudent(guardianId: string, studentId: string) {
         // Delete student sentences from sentences
 
         // Delete student cards from cards
-
+        const cardQuery = query(collection(db, "cards"), where("userId", "==", studentId));
+        const cardSnapshot = await getDocs(cardQuery);
+        cardSnapshot.forEach(async (docSnapshot) => {
+            await deleteDoc(docSnapshot.ref);
+            if (docSnapshot.get("isFavorite")) {
+                await deleteDoc(doc(db, "favorites", studentId, "cards", docSnapshot.id));
+            }
+        });
         // Delete student card_basket and subcollections
 
     } catch (error) {
@@ -218,31 +238,6 @@ export async function setEmotionDays(studentId: string) {
         alert(error);
     }
 }
-
-// Set emotion in firebase
-// export async function setEmotion(emotion_data: { date: Timestamp, emotion: string, userId: string }) {
-//     try {
-//         const emotionQuery = query(
-//             collection(db, "emotions"),
-//             where("date", "==", emotion_data.date),
-//             where("userId", "==", emotion_data.userId)
-//         );
-//         const docId = `${emotion_data.userId}_${emotion_data.date.seconds}`;
-//         const querySnapshot = await getDocs(emotionQuery);
-
-//         if (querySnapshot.empty) {
-//             await addDoc(collection(db, "emotions", docId));
-//         } else {
-//             const docId = querySnapshot.docs[0].id;
-//             const docRef = doc(db, "emotions", docId);
-
-//             await updateDoc(docRef, emotion_data);
-//         }
-//         console.log(Date.now());
-//     } catch (error) {
-//         alert(error);
-//     }
-// }
 
 export async function setEmotion(emotion_data: { date: Timestamp, emotions: string[], userId: string }) {
     try {
@@ -720,4 +715,141 @@ export async function getStudentCardsUsingIds(studentId: string, cardIds: string
     });
 
     return cardMap;
+}
+
+export async function getFavoriteCardIds(studentId: string) {
+    const cardQuery = await query(collection(db, "favorites", studentId, "cards"), orderBy("cardID", "asc"), limit(10));
+    const cardSnapshot = await getDocs(cardQuery);
+    const cardIds: string[] = [];
+    cardSnapshot.forEach(doc => {
+        cardIds.push(doc.id);
+    });
+
+    return cardIds;
+}
+
+export async function setCardFavorite(
+    studentId: string,
+    card: {
+        cardID: string;
+        category: string;
+        imageUrl: string;
+        rank?: number;
+        title: string;
+    },
+    setFavorite: boolean) {
+    try {
+        const favRef = doc(db, 'favorites', studentId);
+        setDoc(favRef, { studentID: studentId }, { merge: true });
+
+        if (setFavorite) {
+            console.log('setting favorite')
+            const cardRef = doc(db, "cards", card.cardID);
+            await updateDoc(cardRef, {
+                isFavorite: true
+            });
+
+            const highestFavoriteCardRankQuery = await query(collection(db, "favorites", studentId, "cards"), orderBy("rank", "desc"), limit(1));
+            const highestFavoriteCardRankSnapshot = await getDocs(highestFavoriteCardRankQuery);
+            card.rank = highestFavoriteCardRankSnapshot.docs[0] ? highestFavoriteCardRankSnapshot.docs[0].get("rank") + 1 : 1;
+
+            const favoriteCardRef = doc(db, "favorites", studentId, "cards", card.cardID);
+            setDoc(favoriteCardRef, card, { merge: true })
+
+        } else {
+            console.log('delete favorite')
+            const cardRef = doc(db, "cards", card.cardID);
+            await updateDoc(cardRef, {
+                isFavorite: false
+            });
+
+
+            const favoriteCardRef = doc(db, "favorites", studentId, "cards", card.cardID);
+            // Save card as variable
+            const favoriteCard = await getDoc(favoriteCardRef);
+            // Delete card from favorites collection
+            deleteDoc(favoriteCardRef);
+
+            // Adjust the ranking of other student favorite cards
+            const unadjustedFavoriteCardsQuery = await query(collection(db, "favorites", studentId, "cards"), where("rank", ">", favoriteCard.get("rank")), limit(9));
+            const unadjustedFavoriteCardsSnapshot = await getDocs(unadjustedFavoriteCardsQuery);
+            unadjustedFavoriteCardsSnapshot.forEach(async doc => {
+                await updateDoc(doc.ref, {
+                    rank: doc.get("rank") - 1
+                });
+            });
+        }
+    } catch (error) {
+        return Promise.reject(error);
+    }
+    return Promise.resolve(`Favorite card updated successfully`);
+}
+interface FavoriteCard {
+    cardID: string;
+    category: string;
+    imageUrl: string;
+    rank: number;
+    title: string;
+}
+
+export async function getStudentFavoriteCards(studentId: string) {
+    const cardQuery = await query(collection(db, "favorites", studentId, "cards"), orderBy("rank", "asc"), limit(10));
+    const cardSnapshot = await getDocs(cardQuery);
+    const cardArray = new Array<FavoriteCard>();
+    cardSnapshot.forEach(doc => {
+        cardArray.push(doc.data() as FavoriteCard);
+    });
+
+    return cardArray;
+}
+
+export async function setStudentFavoriteCardRank(studentId: string, cardId: string, rank: number) {
+    const favRef = doc(db, 'favorites', studentId);
+    setDoc(favRef, { studentID: studentId }, { merge: true });
+
+    const favoriteCardRef = doc(db, "favorites", studentId, "cards", cardId);
+
+    try {
+        await updateDoc(favoriteCardRef, {
+            rank: rank
+        });
+        return Promise.resolve(`Rank updated successfully [${cardId}, ${rank}]`);
+    } catch (error) {
+        return Promise.reject(error);
+    }
+}
+
+export async function getStudentFavoriteCardsCount(studentId: string) {
+    const coll = collection(db, "favorites", studentId, "cards")
+    const snapshot = await getCountFromServer(coll);
+    return snapshot.data().count;
+}
+
+export async function getRecentlyCreatedStudent(userData: { birthday: Timestamp, email: string, name: string, userID: string, userType: string }) {
+    const studentDocQuery =
+        await query(collection(db, "users"),
+            where("birthday", "==", userData.birthday),
+            where("email", "==", userData.email),
+            where("name", "==", userData.name),
+            where("userID", "==", userData.userID),
+            where("userType", "==", userData.userType),
+            limit(1),
+        );
+    const studentDoc = await getDocs(studentDocQuery);
+    return studentDoc.docs[0].get("userID") as string;
+}
+
+export async function getCardId(category: string, imageUrl: string, tapCount: number, title: string, userId: string) {
+    const cardDocQuery =
+        await query(collection(db, "cards"),
+            where("category", "==", category),
+            where("imageUrl", "==", imageUrl),
+            where("tapCount", "==", tapCount),
+            where("title", "==", title),
+            where("userId", "==", userId),
+            limit(1),
+        );
+    const cardDoc = await getDocs(cardDocQuery);
+    console.log(cardDoc.docs)
+    return cardDoc.docs[0].id as string;
 }

@@ -2,14 +2,16 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import mainTheme from "../themes/Theme";
 import { useEffect, useMemo, useState } from "react";
-import { getCardCategories, getOtherStudentCards, getStudentCards, removeCard, setCard, setImage } from "../functions/query";
+import { getCardCategories, getFavoriteCardIds, getOtherStudentCards, getStudentCards, removeCard, setCard, setCardFavorite, setImage } from "../functions/query";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import { Backdrop, Button, Card, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField } from "@mui/material";
+import { Backdrop, Button, Card, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField, Tooltip } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ThemeProvider } from "@emotion/react";
 import addImageIcon from '../assets/add_image_icon 1.png';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
 // const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
 const addCardModalStyle = {
@@ -43,6 +45,7 @@ export default function Cards(props: CardsProps) {
     const [inputCategory, setInputCategory] = useState("");
     const [inputImage, setInputImage] = useState<Blob | null>(null);
     const [inputCardUrl, setInputCardUrl] = useState("");
+
     const [doneButton, setDoneButton] = useState(false);
     const [allCards, setAllCards] = useState<React.ReactNode[]>([]); // All Cards of current user
     const [cards, setCards] = useState<React.ReactNode[]>([]); // Filtered React Element Cards
@@ -52,6 +55,8 @@ export default function Cards(props: CardsProps) {
         textFilter: '',
         categoryFilter: 'All',
     });
+    const [favoriteCardIds, setFavoriteCardIds] = useState<string[]>([]);
+
 
     const handleCategoryChange = (event: React.SyntheticEvent, newValue: string) => {
         setCategory(newValue);
@@ -71,7 +76,7 @@ export default function Cards(props: CardsProps) {
                 const cardRef = await setImage(uniqueFileName, inputImage as Blob);
                 const card_data = {
                     category: inputCategory,
-                    imageUrl: "",
+                    imageUrl: undefined,
                     tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
@@ -118,7 +123,7 @@ export default function Cards(props: CardsProps) {
             if (studentCards) {
                 for (const [key, value] of studentCards) {
                     cardsArray.push(
-                        <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+                        <Card key={key} data-category-type={value.category} data-id={key} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
                             <CardMedia
                                 sx={{ height: '15vh', width: '100%', objectFit: 'contain', }}
                                 image={value.imageUrl}
@@ -132,9 +137,44 @@ export default function Cards(props: CardsProps) {
                                 }}>
                                     {value.title}
                                 </Typography>
-                                <IconButton aria-label="delete" size="medium" color='error' sx={{ pt: "0" }} onClick={() => setDeleteCardModal({ isActive: true, cardId: key, cardName: value.title })}>
-                                    <DeleteIcon fontSize="inherit" />
-                                </IconButton>
+
+                                <ThemeProvider theme={mainTheme}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start' }}>
+                                        <IconButton aria-label="favorite" size="medium" color="primary" sx={{ pt: "0" }}
+                                            onClick={() => {
+                                                if (favoriteCardIds.length <= 3 && favoriteCardIds.includes(key)) {
+                                                    alert("You must have 3 favorite cards");
+                                                }
+                                                else if (favoriteCardIds.length >= 10 && !favoriteCardIds.includes(key)) {
+                                                    alert("You can only have 10 favorite cards");
+                                                } else {
+                                                    setCardFavorite(props.studentId, { cardID: key, category: value.category, imageUrl: value.imageUrl, title: value.title }, !favoriteCardIds.includes(key))
+                                                        .then(() => {
+                                                            setFavoriteCardIds(favoriteCardIds.includes(key) ? favoriteCardIds.filter(id => id !== key) : [...favoriteCardIds, key]);
+                                                        })
+                                                        .catch(error => {
+                                                            console.error("Error updating favorite status: ", error);
+                                                        });
+                                                }
+                                            }}>
+                                            {favoriteCardIds.includes(key) ?
+                                                <Tooltip title="Remove from favorites">
+                                                    <FavoriteIcon fontSize="inherit" />
+                                                </Tooltip>
+                                                :
+                                                <Tooltip title="Add to favorites">
+                                                    <FavoriteBorderIcon fontSize="inherit" />
+                                                </Tooltip>
+                                            }
+                                        </IconButton>
+                                        <Tooltip title="Delete">
+                                            <IconButton aria-label="delete" size="medium" color='error' sx={{ pt: "0" }} onClick={() => setDeleteCardModal({ isActive: true, cardId: key, cardName: value.title })}>
+                                                <DeleteIcon fontSize="inherit" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+
+                                </ThemeProvider>
                             </CardContent>
                         </Card >
                     );
@@ -173,7 +213,7 @@ export default function Cards(props: CardsProps) {
         fetchCategories();
         fetchCards();
         fetchOtherCards();
-    }, [props.studentId,]);
+    }, [props.studentId, favoriteCardIds]);
 
     useEffect(() => {
         if (category === "All") {
@@ -206,6 +246,16 @@ export default function Cards(props: CardsProps) {
         return newOtherCards;
     }, [otherCards, filterOtherCards])
 
+
+    useEffect(() => {
+        const fetchFavoriteCardIds = async () => {
+            const favoriteCardsArray = await getFavoriteCardIds(props.studentId);
+            console.log(favoriteCardsArray)
+            setFavoriteCardIds(favoriteCardsArray);
+        }
+
+        fetchFavoriteCardIds();
+    }, [props.studentId]);
 
     return (
         <Box display='flex' flexDirection='column' justifyContent='flex-start' width={'100%'} height={'100%'} flex={1}
@@ -345,7 +395,7 @@ export default function Cards(props: CardsProps) {
 
                                 <Box
                                     display='flex'
-                                    border={`4px dashed ${inputImage ? mainTheme.palette.primary.main : `#ababab`}`}
+                                    border={`4px dashed ${!doneButton ? mainTheme.palette.primary.main : `#ababab`}`}
                                     borderRadius={8}
                                     width={'100%'}
                                     height={'100%'}
@@ -427,14 +477,7 @@ export default function Cards(props: CardsProps) {
             </Dialog>
 
 
-            {/* <Typography variant="h6" component="div"
-                sx={{
-                    textTransform: "capitalize",
-                    color: mainTheme.palette.primary.main,
-                }}
-            >
-                {`Current Cards`}
-            </Typography> */}
+
 
             <Box display='flex' flexDirection='row' justifyContent='space-between'
                 sx={{

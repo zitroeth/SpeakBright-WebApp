@@ -23,6 +23,7 @@ import { auth, secondaryAuth, secondaryDb } from '../config/firebase';
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Timestamp, doc, setDoc } from 'firebase/firestore'; // Import from Firebase
 import useAuth, { checkIfDocumentExists } from '../hooks/useAuth';
+import { getRecentlyCreatedStudent } from '../functions/query';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -152,6 +153,8 @@ export default function Register() {
 
             await signOut(secondaryAuth);
             alert("User created successfully!");
+            const recentlyCreatedStudent = await getRecentlyCreatedStudent(users_data);
+            window.location.href = `/Home/${recentlyCreatedStudent}`;
         } catch (error) {
             alert(error);
         }

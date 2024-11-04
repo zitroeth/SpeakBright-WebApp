@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { IconButton, ThemeProvider } from '@mui/material';
 import { mainTheme, gradientTheme } from '../themes/Theme';
-import speakBrightLogo from '../assets/SpeakBright 1.png';
+import speakBrightLogo from '../assets/SpeakBright 1 CROP.png';
 import { signOut } from 'firebase/auth';
 import useAuth from '../hooks/useAuth';
 import { auth } from '../config/firebase';
@@ -29,26 +29,24 @@ export default function NavBar() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        height: '8vh',
                         // width: '100%',
                         flexGrow: 1,
-                        padding: '0% 5% !important', // Use pixel values for testing
+                        padding: '0% 4% !important',
                     }}>
-                        <div style={{
-                            flex: 1,
-                        }}>
-                            <img src={speakBrightLogo} alt="SpeakBright Logo" id='header-logo'
-                                style={{
-                                    height: "100px",
-                                }}
-                            >
-                            </img>
-                        </div>
+                        <img src={speakBrightLogo} alt="SpeakBright Logo" id='header-logo'
+                            style={{
+                                height: "50%",
+                            }}
+                        >
+                        </img>
                         <div style={{
                             display: 'flex',
                             flexDirection: 'row',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             flex: 1,
+                            marginLeft: '10vw',
                         }}>
                             <div id="HAC"
                                 style={{

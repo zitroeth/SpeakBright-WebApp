@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 // import { getStudentInfo, removeStudent, setEmotionDays } from "../functions/query";
-import { getStudentInfo, removeStudent } from "../functions/query";
-import { useEffect, useState } from "react";
+import { getStudentFavoriteCardsCount, getStudentInfo, removeStudent } from "../functions/query";
+import { useEffect, useRef, useState } from "react";
 // import { collection, doc, DocumentData, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { doc, DocumentData, onSnapshot } from "firebase/firestore";
 import Box from "@mui/material/Box";
@@ -25,6 +25,8 @@ import DialogActions from "@mui/material/DialogActions";
 import useAuth from "../hooks/useAuth";
 import { db } from "../config/firebase";
 import StudentPrompt from "../components/StudentPrompt";
+import Favorites from "./Favorites";
+import AddFavoriteCardDialog from "../components/AddFavoriteCardDialog";
 
 function a11yProps(index: number) {
     return {
@@ -35,70 +37,29 @@ function a11yProps(index: number) {
 
 export default function Student() {
     const { studentId } = useParams();
+    const favoriteCardsCount = useRef<number | null>(null);
     const [studentInfo, setStudentInfo] = useState<DocumentData | null>(null);
-    const [tabValue, setTabValue] = useState(0);
+    const [tabValue, setTabValue] = useState(1);
     const [deleteStudentModal, setDeleteStudentModal] = useState(false); // Modify if multiple guardians
-    // const [latestEmotion, setLatestEmotion] = useState<string[]>([]);
-    const [studentPrompts, setStudentPrompts] = useState({});
-
     const guardianId = useAuth().currentUser?.uid;
+    const [addFavoriteCardDialog, setAddFavoriteCardDialog] = useState(false);
 
     // useEffect(() => {
-    //     const initializeStudentEmotions = async () => {
-    //         try {
-    //             await setEmotionDays(id as string);
-    //         } catch (error) {
-    //             alert(error);
-    //         }
-    //     };
+    //     const documentRef = doc(db, 'prompt', studentId as string);
 
-    //     initializeStudentEmotions();
-    // }, [id]);
-
-    // useEffect(() => {
-    //     const emotionQuery = query(
-    //         collection(db, "emotions"),
-    //         where("userId", "==", id),
-    //         orderBy("date", "desc"),
-    //         limit(2)
-    //     );
-
-    //     const unsubscribe = onSnapshot(emotionQuery, (emotionSnapshot) => {
-    //         if (!emotionSnapshot.empty) {
-    //             // Get the latest emotion document (adjust if needed)
-    //             const latestEmotionDoc = emotionSnapshot.docs.length > 1
-    //                 ? emotionSnapshot.docs[0] // Change this if you need second-to-last
-    //                 : emotionSnapshot.docs[0];
-
-    //             console.log("Real-time latestEmotionDoc:", latestEmotionDoc.data());
-    //             setLatestEmotion(latestEmotionDoc.data().emotions);
+    //     const unsubscribe = onSnapshot(documentRef, (docSnapshot) => {
+    //         if (docSnapshot.exists()) {
+    //             setStudentPrompts(docSnapshot.data());
+    //             console.log(docSnapshot.data())
     //         } else {
-    //             setLatestEmotion([]);
+    //             setStudentPrompts({});
     //         }
-    //     }, (error: Error) => {
-    //         console.error("Error fetching real-time emotions:", error);
+    //     }, (error) => {
+    //         alert(error);
     //     });
 
     //     return () => unsubscribe();
-    // }, [id]);
-
-    useEffect(() => {
-        const documentRef = doc(db, 'prompt', studentId as string);
-
-        const unsubscribe = onSnapshot(documentRef, (docSnapshot) => {
-            if (docSnapshot.exists()) {
-                setStudentPrompts(docSnapshot.data());
-                console.log(docSnapshot.data())
-            } else {
-                setStudentPrompts({});
-            }
-        }, (error) => {
-            alert(error);
-        });
-
-        // Clean up the subscription when the component unmounts or docId changes
-        return () => unsubscribe();
-    }, [studentId]);
+    // }, [studentId]);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
@@ -131,6 +92,21 @@ export default function Student() {
 
     }, [studentId]);
 
+    useEffect(() => {
+        const fetchStudentFavoriteCardsCount = async () => {
+            try {
+                const newStudentFavoriteCardsCount = await getStudentFavoriteCardsCount(studentId as string);
+                favoriteCardsCount.current = newStudentFavoriteCardsCount;
+                if (favoriteCardsCount.current < 3) {
+                    setAddFavoriteCardDialog(true);
+                    setTabValue(0);
+                }
+            } catch (error) {
+                alert(error);
+            }
+        };
+        fetchStudentFavoriteCardsCount();
+    }, [studentId]);
 
     function changeLink() {
         // Select the anchor element by its ID
@@ -148,7 +124,7 @@ export default function Student() {
 
     return (
         <ThemeProvider theme={mainTheme}>
-
+            <AddFavoriteCardDialog open={addFavoriteCardDialog} setOpen={setAddFavoriteCardDialog} favoriteCardCount={favoriteCardsCount.current as number} studentId={studentId as string} />
             <Dialog
                 open={deleteStudentModal}
                 onClose={() => setDeleteStudentModal(false)}
@@ -171,19 +147,14 @@ export default function Student() {
                 </DialogActions>
             </Dialog>
 
-
-
             <Box display='flex' flexDirection='column' maxHeight={'75%'} flex={1}
                 sx={{
-                    padding: '5vh 5vw',
-
-                }}
-            >
+                    padding: '5vh 2vw',
+                }}>
                 <Box display='flex' flexDirection='row' justifyContent='space-between'
                     sx={{
                         width: '100%',
-                    }}
-                >
+                    }}>
                     <Box display='flex' flexDirection='column'>
                         <Typography variant="h5" component="h5"
                             sx={{
@@ -203,17 +174,6 @@ export default function Student() {
                         </Typography>
                     </Box>
 
-                    <Box display='flex'
-                        sx={{
-                            height: 'auto',
-                            width: 'fit-content',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}>
-                        <StudentPrompt studentPrompts={studentPrompts} />
-                    </Box>
-
-                    {/* <EmotionCard emotions={latestEmotion || []} /> */}
                 </Box>
 
                 <Box display='flex' flexDirection='row' justifyContent='flex-start'
@@ -225,19 +185,19 @@ export default function Student() {
                         sx={{
                             border: '1px solid #e8e8e8',
                         }}>
-                        <Tab label="Cards" {...a11yProps(0)}
+                        <Tab label="Favorites" {...a11yProps(0)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />
-                        <Tab label="Notes" {...a11yProps(1)}
+                        <Tab label="Cards" {...a11yProps(1)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />
-                        <Tab label="Summary" {...a11yProps(2)}
+                        <Tab label="Notes" {...a11yProps(2)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
@@ -257,11 +217,11 @@ export default function Student() {
                         (() => {
                             switch (tabValue) {
                                 case 0:
-                                    return <Cards studentId={studentId as string} />
+                                    return <Favorites studentId={studentId as string} />
                                 case 1:
-                                    return <Notes />
+                                    return <Cards studentId={studentId as string} />
                                 case 2:
-                                    return <Summary />
+                                    return <Notes />
                                 default:
                                     return <></>
                             }
