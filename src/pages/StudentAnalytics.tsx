@@ -1,12 +1,14 @@
 import Typography from '@mui/material/Typography';
 import { BarChart } from '@mui/x-charts/BarChart';
-import { useEffect, useState } from 'react';
-import { fetchRecentSessionWithTappedCards, getIndependentCardIds, getStudentInfo, getStudentPromptData } from '../functions/query';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { fetchRecentSessionWithTappedCards, filterStudentChartData, getCardIdsFromStudentPromptData, getIndependentCardIds, getStudentCards, getStudentInfo, getStudentPromptData, SessionPromptMap } from '../functions/query';
 import { useParams } from 'react-router-dom';
 import { LineChart, PieChart } from '@mui/x-charts';
 import { Box, Card, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent } from '@mui/material';
 import { Timestamp } from 'firebase/firestore';
 import IndependentCards from '../components/IndependentCards';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 
 interface StudentInfo {
     birthday: Timestamp;
@@ -38,19 +40,81 @@ interface TappedCard {
     timeTapped: Timestamp;
 }
 
+type StudentCard = {
+    category: string;
+    imageUrl: string;
+    isFavorite?: boolean;
+    phase1_independence?: boolean;
+    phase2_independence?: boolean;
+    phase3_independence?: boolean;
+    tapCount: number;
+    title: string;
+    userId: string;
+}
+
 const promptPalette = ["#ff6260", "#fcc260", "#aae173", "#6c8dff", "#9e7cff"];
 
 export default function StudentAnalytics() {
     const { studentId } = useParams();
     const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null)
-    const [studentPromptsData, setStudentPromptsData] = useState<ChartData | null>(null)
+    const [studentPromptsData, setStudentPromptsData] = useState<SessionPromptMap | null>(null)
     const [recentSessionData, setRecentSessionData] = useState<{ session: SessionInfo, tappedCards: TappedCard[] } | null>(null);
-    const [promptFilter, setPromptFilter] = useState("Daily");
+    const [promptFilter, setPromptFilter] = useState<{ cardID: string | undefined, startDate: Date | undefined, endDate: Date | undefined }>({
+        cardID: "",
+        startDate: undefined,
+        endDate: undefined,
+    });
     const [independentCardIds, setIndependentCardIds] = useState<string[]>([]);
+    const [studentCards, setStudentCards] = useState<Map<string, StudentCard>>(new Map<string, StudentCard>());
+    const studentPromptsCard = useRef<string[]>([]);
+    const [startDatecleared, setStartDateCleared] = useState<boolean>(false);
+    const [endDatecleared, setEndDateCleared] = useState<boolean>(false);
 
-    const handlePromptFilterChange = (event: SelectChangeEvent) => {
-        setPromptFilter(event.target.value as string);
+    const handlePromptFilterChange = ({ cardID, startDate, endDate }: { cardID: string, startDate: Date | undefined, endDate: Date | undefined }) => {
+        setPromptFilter({ cardID, startDate, endDate });
     };
+
+    const handleStartDateChange = (value: dayjs.Dayjs | null) => {
+        if (value) {
+            // Convert dayjs object to JavaScript Date
+            const jsDate = value.toDate();
+            setPromptFilter({ ...promptFilter, startDate: jsDate });
+        } else {
+            setPromptFilter({ ...promptFilter, startDate: undefined });
+        }
+    };
+
+    const handleEndDateChange = (value: dayjs.Dayjs | null) => {
+        if (value) {
+            // Convert dayjs object to JavaScript Date
+            const jsDate = value.toDate();
+            setPromptFilter({ ...promptFilter, endDate: jsDate });
+        } else {
+            setPromptFilter({ ...promptFilter, endDate: undefined });
+        }
+    };
+
+    useEffect(() => {
+        if (startDatecleared) {
+            const timeout = setTimeout(() => {
+                setStartDateCleared(false);
+            }, 1500);
+
+            return () => clearTimeout(timeout);
+        }
+        return () => { };
+    }, [startDatecleared]);
+
+    useEffect(() => {
+        if (endDatecleared) {
+            const timeout = setTimeout(() => {
+                setEndDateCleared(false);
+            }, 1500);
+
+            return () => clearTimeout(timeout);
+        }
+        return () => { };
+    }, [endDatecleared]);
 
     useEffect(() => {
         const fetchStudentName = async () => {
@@ -64,10 +128,11 @@ export default function StudentAnalytics() {
 
         const fetchStudentPromptData = async () => {
             try {
-                const newStudentPrompts = await getStudentPromptData(studentId as string, String(studentInfo?.phase), promptFilter);
+                const newStudentPrompts = await getStudentPromptData(studentId as string, String(studentInfo?.phase));
                 setStudentPromptsData(newStudentPrompts);
                 // console.log("testNewStudent")
                 // console.log(newStudentPrompts)
+                studentPromptsCard.current = getCardIdsFromStudentPromptData(newStudentPrompts);
             } catch (error) {
                 console.error("Error fetching student prompts:", error);
             }
@@ -85,20 +150,33 @@ export default function StudentAnalytics() {
             // console.log(independentCardIds)
         };
 
+        const fetchStudentCards = async () => {
+            const fetchedStudentCards = await getStudentCards(studentId as string,);
+            setStudentCards(fetchedStudentCards);
+        };
+
         fetchStudentName();
         fetchStudentPromptData();
         fetchRecentSessionData();
         fetchIndependentCardIds();
+        fetchStudentCards();
     }, [studentId, studentInfo?.phase, promptFilter]);
+
+    // useEffect(() => {
+    //     studentPromptsCard.current = getCardIdsFromStudentPromptData(studentPromptsData);
+    // }, [studentPromptsData]);
+
+    const studentPromptsChart = useMemo(() => filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate), [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
 
     const inputArrays =
     {
-        Independent: studentPromptsData?.independentArray || [],
-        Verbal: studentPromptsData?.verbalArray || [],
-        Gestural: studentPromptsData?.gesturalArray || [],
-        Modeling: studentPromptsData?.modelingArray || [],
-        Physical: studentPromptsData?.physicalArray || [],
+        Independent: studentPromptsChart?.independentArray || [],
+        Verbal: studentPromptsChart?.verbalArray || [],
+        Gestural: studentPromptsChart?.gesturalArray || [],
+        Modeling: studentPromptsChart?.modelingArray || [],
+        Physical: studentPromptsChart?.physicalArray || [],
     }
+
 
     function calculatePercentages(arrays: { [key: string]: number[] }): { label: string; value: number }[] {
         const totalSum = Object.values(arrays).reduce((sum, arr) => sum + arr.reduce((a, b) => a + b, 0), 0);
@@ -173,6 +251,90 @@ export default function StudentAnalytics() {
                         >
                         </Card> */}
 
+                        <Card elevation={4}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                p: 2,
+                                overflowX: 'auto'
+                            }}
+                        >
+                            <Typography variant='h6' component='h6'>{`Most Recent Session`}</Typography>
+                            <Typography variant='subtitle1' mt={1}>{`Time: ${recentSessionData?.session?.sessionTime.toDate()}`}</Typography>
+                            <Typography variant='subtitle1'>{`Total cards tapped: ${recentSessionData?.tappedCards.length}`}</Typography>
+                            <BarChart
+                                xAxis={[{ scaleType: 'band', data: barGraphData.titles }]}
+                                series={[{ data: barGraphData.dataValues }]}
+                                height={160}
+                            />
+                        </Card>
+
+                    </Box>
+
+                    <Box gap={2}
+                        sx={{
+                            mt: 4,
+                            display: 'flex',
+                            width: '100%',
+                        }}>
+                        <Card
+                            elevation={4}
+                            sx={{
+                                p: 1,
+                                flex: 1,
+                            }}>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }} mt={2} mx={2}>
+                                <Typography variant='h4' component='h4' >{`Prompts`}</Typography>
+                                <Box sx={{ minWidth: 320, display: 'flex', gap: 1 }}>
+                                    <FormControl fullWidth>
+                                        <InputLabel id="demo-simple-select-label">Card</InputLabel>
+                                        <Select
+                                            labelId="demo-simple-select-label"
+                                            id="demo-simple-select"
+                                            value={promptFilter.cardID as string}
+                                            label="Prompt Filter"
+                                            onChange={(event: SelectChangeEvent) => handlePromptFilterChange({ ...promptFilter, cardID: event.target.value as string })}
+                                        >
+                                            <MenuItem value={""}>All</MenuItem>
+                                            {studentPromptsCard.current.map((cardID) => (
+                                                <MenuItem key={cardID} value={cardID}>
+                                                    {studentCards.get(cardID)?.title}
+                                                </MenuItem>
+                                            ))}
+                                            {/* {Array.from(studentCards.entries()).map(([cardId, card]) => (
+                                                <MenuItem key={cardId} value={cardId}>
+                                                    {card.title}
+                                                </MenuItem>
+                                            ))} */}
+                                        </Select>
+                                    </FormControl>
+                                    <DatePicker label="Start Date" format="LL" sx={{ width: '150%' }} onChange={handleStartDateChange}
+                                        slotProps={{
+                                            field: { clearable: true, onClear: () => setStartDateCleared(true) },
+                                        }} />
+                                    <DatePicker label="End Date" format="LL" sx={{ width: '150%' }} onChange={handleEndDateChange}
+                                        slotProps={{
+                                            field: { clearable: true, onClear: () => setEndDateCleared(true) },
+                                        }} />
+                                </Box>
+                            </Box>
+
+                            <LineChart
+                                colors={promptPalette}
+                                xAxis={[{ scaleType: 'band', data: studentPromptsChart?.dateArray || [] }]}
+                                series={[
+                                    { data: studentPromptsChart?.independentArray || [], label: 'Independent', },
+                                    { data: studentPromptsChart?.verbalArray || [], label: 'Verbal', },
+                                    { data: studentPromptsChart?.gesturalArray || [], label: 'Gestural', },
+                                    { data: studentPromptsChart?.modelingArray || [], label: 'Modeling', },
+                                    { data: studentPromptsChart?.physicalArray || [], label: 'Physical', },
+                                ]}
+                                height={400}
+                                grid={{ vertical: true, horizontal: true }}
+                            />
+                        </Card>
+
                         <Card
                             elevation={4}
                             sx={{
@@ -198,69 +360,8 @@ export default function StudentAnalytics() {
                                 height={160} width={400}
                             />
                         </Card>
-
-                        <Card elevation={4}
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                p: 2,
-                                overflowX: 'auto'
-                            }}
-                        >
-                            <Typography variant='h6' component='h6'>{`Most Recent Session`}</Typography>
-                            <Typography variant='subtitle1' mt={1}>{`Time: ${recentSessionData?.session?.sessionTime.toDate()}`}</Typography>
-                            <Typography variant='subtitle1'>{`Total cards tapped: ${recentSessionData?.tappedCards.length}`}</Typography>
-                            <BarChart
-                                xAxis={[{ scaleType: 'band', data: barGraphData.titles }]}
-                                series={[{ data: barGraphData.dataValues }]}
-                                height={160}
-                            />
-                        </Card>
-
                     </Box>
 
-                    <Card
-                        elevation={4}
-                        sx={{
-                            mt: 3,
-                            p: 1,
-                        }}>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }} mt={2} mx={2}>
-                            <Typography variant='h4' component='h4' >{`Prompts by ${promptFilter === "Daily" ? "Day" : promptFilter.split("ly")[0]}`}</Typography>
-                            <Box sx={{ minWidth: 120 }}>
-                                <FormControl fullWidth>
-                                    <InputLabel id="demo-simple-select-label">Filter</InputLabel>
-                                    <Select
-                                        labelId="demo-simple-select-label"
-                                        id="demo-simple-select"
-                                        value={promptFilter}
-                                        label="Prompt Filter"
-                                        onChange={handlePromptFilterChange}
-                                    >
-                                        <MenuItem value={"Daily"}>Daily</MenuItem>
-                                        <MenuItem value={"Weekly"}>Weekly</MenuItem>
-                                        <MenuItem value={"Monthly"}>Monthly</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        </Box>
-
-                        <LineChart
-                            colors={promptPalette}
-                            xAxis={[{ scaleType: 'band', data: studentPromptsData?.dateArray }]}
-                            series={[
-                                { data: studentPromptsData?.independentArray, label: 'Independent', },
-                                { data: studentPromptsData?.verbalArray, label: 'Verbal', },
-                                { data: studentPromptsData?.gesturalArray, label: 'Gestural', },
-                                { data: studentPromptsData?.modelingArray, label: 'Modeling', },
-                                { data: studentPromptsData?.physicalArray, label: 'Physical', },
-                            ]}
-                            height={400}
-                            grid={{ vertical: true, horizontal: true }}
-                        />
-
-                    </Card>
 
                     <Box gap={3}
                         sx={{
@@ -282,18 +383,7 @@ export default function StudentAnalytics() {
                                 <IndependentCards studentId={studentId as string} cardIds={independentCardIds} />
                             </Box>
                         </Card>
-
-                        {/* <Card
-                            elevation={4}
-                            sx={{
-                                my: 3,
-                                p: 1,
-                                minHeight: '400px',
-                                flex: '2 2',
-                            }}>
-                        </Card> */}
                     </Box>
-
                 </>
                 :
                 <Typography>{"Loading..."}</Typography>

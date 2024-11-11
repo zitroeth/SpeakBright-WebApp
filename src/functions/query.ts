@@ -472,7 +472,7 @@ export async function getStudentsForTable(guardianId: string) {
     }
 }
 
-interface ChartData {
+type ChartData = {
     dateArray: string[];
     gesturalArray: number[];
     independentArray: number[];
@@ -481,128 +481,277 @@ interface ChartData {
     verbalArray: number[];
 }
 
-export async function getStudentPromptData(studentId: string, studentPhase: string, filterType: string): Promise<ChartData> {
-    try {
-        const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`));
+// export async function getStudentPromptData(studentId: string, studentPhase: string, filterType: string): Promise<ChartData> {
+//     try {
+//         const sessionQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`));
 
-        const sessionSnapshot = await getDocs(sessionQuery);
+//         const sessionSnapshot = await getDocs(sessionQuery);
 
-        const dailyData: {
-            [date: string]: {
-                gestural: number, independent: number, modeling: number, physical: number, verbal: number
-            }
-        } = {};
+//         const dailyData: {
+//             [date: string]: {
+//                 gestural: number, independent: number, modeling: number, physical: number, verbal: number
+//             }
+//         } = {};
 
-        for (const sessionDoc of sessionSnapshot.docs) {
-            const sessionData = sessionDoc.data();
-            const sessionDate = (sessionData.timestamp as Timestamp).toDate(); // Convert to Date object
+//         for (const sessionDoc of sessionSnapshot.docs) {
+//             const sessionData = sessionDoc.data();
+//             const sessionDate = (sessionData.timestamp as Timestamp).toDate(); // Convert to Date object
 
-            const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`, sessionDoc.id, `trialPrompt`));
-            const trialSnapshot = await getDocs(trialPromptQuery);
+//             const trialPromptQuery = query(collection(db, `activity_log`, studentId, `phase`, studentPhase, `session`, sessionDoc.id, `trialPrompt`));
+//             const trialSnapshot = await getDocs(trialPromptQuery);
 
-            trialSnapshot.forEach((trialDoc) => {
-                const trialData = trialDoc.data();
-                const { prompt } = trialData as { prompt: string };
+//             trialSnapshot.forEach((trialDoc) => {
+//                 const trialData = trialDoc.data();
+//                 const { prompt } = trialData as { prompt: string };
 
-                // Format the session date based on the filter type
-                let formattedDate: string;
-                switch (filterType) {
-                    case 'Daily': {
-                        formattedDate = sessionDate.toLocaleDateString();
-                        break;
-                    }
-                    case 'Weekly': {
-                        const weekStart = new Date(sessionDate);
-                        weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
+//                 // Format the session date based on the filter type
+//                 let formattedDate: string;
+//                 switch (filterType) {
+//                     case 'Daily': {
+//                         formattedDate = sessionDate.toLocaleDateString();
+//                         break;
+//                     }
+//                     case 'Weekly': {
+//                         const weekStart = new Date(sessionDate);
+//                         weekStart.setDate(sessionDate.getDate() - sessionDate.getDay());
 
-                        const weekEnd = new Date(weekStart);
-                        weekEnd.setDate(weekStart.getDate() + 6);
+//                         const weekEnd = new Date(weekStart);
+//                         weekEnd.setDate(weekStart.getDate() + 6);
 
-                        console.log(sessionDate)
-                        console.log(`start: ${weekStart} \nend: ${weekEnd}`)
+//                         console.log(sessionDate)
+//                         console.log(`start: ${weekStart} \nend: ${weekEnd}`)
 
-                        formattedDate = `${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
-                        break;
-                    }
-                    case 'Monthly': {
-                        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                        formattedDate = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
-                        break;
-                    }
-                    default: {
-                        formattedDate = sessionDate.toISOString().split('T')[0]; // Default to day
-                        break;
-                    }
-                }
+//                         formattedDate = `${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}`;
+//                         break;
+//                     }
+//                     case 'Monthly': {
+//                         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+//                         formattedDate = `${monthNames[sessionDate.getMonth()]} ${sessionDate.getFullYear()}`;
+//                         break;
+//                     }
+//                     default: {
+//                         formattedDate = sessionDate.toISOString().split('T')[0]; // Default to day
+//                         break;
+//                     }
+//                 }
 
-                if (!dailyData[formattedDate]) {
-                    dailyData[formattedDate] = {
-                        gestural: 0,
-                        independent: 0,
-                        modeling: 0,
-                        physical: 0,
-                        verbal: 0,
-                    };
-                }
+//                 if (!dailyData[formattedDate]) {
+//                     dailyData[formattedDate] = {
+//                         gestural: 0,
+//                         independent: 0,
+//                         modeling: 0,
+//                         physical: 0,
+//                         verbal: 0,
+//                     };
+//                 }
 
-                switch (prompt) {
-                    case "Gestural":
-                        dailyData[formattedDate].gestural += 1;
-                        break;
-                    case "Independent":
-                        dailyData[formattedDate].independent += 1;
-                        break;
-                    case "Modeling":
-                        dailyData[formattedDate].modeling += 1;
-                        break;
-                    case "Physical":
-                        dailyData[formattedDate].physical += 1;
-                        break;
-                    case "Verbal":
-                        dailyData[formattedDate].verbal += 1;
-                        break;
-                    default:
-                        break;
-                }
+//                 switch (prompt) {
+//                     case "Gestural":
+//                         dailyData[formattedDate].gestural += 1;
+//                         break;
+//                     case "Independent":
+//                         dailyData[formattedDate].independent += 1;
+//                         break;
+//                     case "Modeling":
+//                         dailyData[formattedDate].modeling += 1;
+//                         break;
+//                     case "Physical":
+//                         dailyData[formattedDate].physical += 1;
+//                         break;
+//                     case "Verbal":
+//                         dailyData[formattedDate].verbal += 1;
+//                         break;
+//                     default:
+//                         break;
+//                 }
+//             });
+//         }
+
+//         // Prepare arrays for the chart
+//         const dateArray: string[] = [];
+//         const gesturalArray: number[] = [];
+//         const independentArray: number[] = [];
+//         const modelingArray: number[] = [];
+//         const physicalArray: number[] = [];
+//         const verbalArray: number[] = [];
+
+//         Object.keys(dailyData).forEach(date => {
+//             dateArray.push(date);
+//             gesturalArray.push(dailyData[date].gestural);
+//             independentArray.push(dailyData[date].independent);
+//             modelingArray.push(dailyData[date].modeling);
+//             physicalArray.push(dailyData[date].physical);
+//             verbalArray.push(dailyData[date].verbal);
+//         });
+
+//         return {
+//             dateArray,
+//             gesturalArray,
+//             independentArray,
+//             modelingArray,
+//             physicalArray,
+//             verbalArray,
+//         };
+//     } catch (error) {
+//         console.error(error);
+//         return {
+//             dateArray: [],
+//             gesturalArray: [],
+//             independentArray: [],
+//             modelingArray: [],
+//             physicalArray: [],
+//             verbalArray: [],
+//         };
+//     }
+// }
+
+export type SessionPromptMap = Map<string, { timestamp: Timestamp, total_trials: number, trialPrompt: TrialPromptMap }>;
+export type TrialPromptMap = Map<string, { cardID: string, prompt: string, timestamp: Timestamp }>;
+
+export async function getStudentPromptData(studentId: string, studentPhase: string): Promise<SessionPromptMap> {
+    const sessionPromptMap: SessionPromptMap = new Map();
+
+    const sessionRef = collection(db, `activity_log/${studentId}/phase/${studentPhase}/session`);
+    const sessionSnapshot = await getDocs(sessionRef);
+
+    for (const sessionDoc of sessionSnapshot.docs) {
+        const trialPromptRef = collection(db, `activity_log/${studentId}/phase/${studentPhase}/session/${sessionDoc.id}/trialPrompt`);
+        const trialPromptSnapshot = await getDocs(trialPromptRef);
+
+        const trialPromptMap: TrialPromptMap = new Map();
+        for (const trialPromptDoc of trialPromptSnapshot.docs) {
+            trialPromptMap.set(trialPromptDoc.id, {
+                cardID: trialPromptDoc.data().cardID as string,
+                prompt: trialPromptDoc.data().prompt as string,
+                timestamp: trialPromptDoc.data().timestamp as Timestamp,
             });
         }
 
-        // Prepare arrays for the chart
-        const dateArray: string[] = [];
-        const gesturalArray: number[] = [];
-        const independentArray: number[] = [];
-        const modelingArray: number[] = [];
-        const physicalArray: number[] = [];
-        const verbalArray: number[] = [];
+        sessionPromptMap.set(sessionDoc.id, { timestamp: sessionDoc.data().timestamp as Timestamp, total_trials: sessionDoc.data().total_trials as number, trialPrompt: trialPromptMap });
 
-        Object.keys(dailyData).forEach(date => {
-            dateArray.push(date);
-            gesturalArray.push(dailyData[date].gestural);
-            independentArray.push(dailyData[date].independent);
-            modelingArray.push(dailyData[date].modeling);
-            physicalArray.push(dailyData[date].physical);
-            verbalArray.push(dailyData[date].verbal);
-        });
-
-        return {
-            dateArray,
-            gesturalArray,
-            independentArray,
-            modelingArray,
-            physicalArray,
-            verbalArray,
-        };
-    } catch (error) {
-        console.error(error);
-        return {
-            dateArray: [],
-            gesturalArray: [],
-            independentArray: [],
-            modelingArray: [],
-            physicalArray: [],
-            verbalArray: [],
-        };
     }
+    return sessionPromptMap;
+}
+
+export function getCardIdsFromStudentPromptData(studentPromptData: SessionPromptMap | null) {
+    const studentCardIds: string[] = [];
+    if (!studentPromptData) return studentCardIds;
+
+    studentPromptData.forEach(sessionPrompt => {
+        sessionPrompt.trialPrompt.forEach(trialPrompt => {
+            if (!studentCardIds.includes(trialPrompt.cardID))
+                studentCardIds.push(trialPrompt.cardID);
+        });
+    });
+    return studentCardIds;
+}
+
+export function filterStudentChartData(studentPromptData: SessionPromptMap | null, cardID: string, startDate?: Date, endDate?: Date) {
+    const chartData = {
+        dateArray: [],
+        gesturalArray: [],
+        independentArray: [],
+        modelingArray: [],
+        physicalArray: [],
+        verbalArray: []
+    } as ChartData;
+
+    const filteredStudentPromptData: SessionPromptMap = new Map(studentPromptData);
+
+    if (cardID) {
+        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
+            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                if (trialPrompt.cardID !== cardID) {
+                    sessionPrompt.trialPrompt.delete(trialPromptId);
+                }
+            });
+
+            if (sessionPrompt.trialPrompt.size === 0) {
+                filteredStudentPromptData.delete(sessionId);
+            }
+        });
+    }
+
+    if (startDate) {
+        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
+            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                if (trialPrompt.timestamp.toDate().valueOf() < startDate.valueOf()) {
+                    sessionPrompt.trialPrompt.delete(trialPromptId);
+                }
+            });
+
+            if (sessionPrompt.trialPrompt.size === 0) {
+                filteredStudentPromptData.delete(sessionId);
+            }
+        });
+    }
+
+    if (endDate) {
+        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
+            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                if (trialPrompt.timestamp.toDate().valueOf() > endDate.valueOf() + 86399999) {
+                    sessionPrompt.trialPrompt.delete(trialPromptId);
+                }
+            });
+
+            if (sessionPrompt.trialPrompt.size === 0) {
+                filteredStudentPromptData.delete(sessionId);
+            }
+        });
+    }
+
+    const dailyData: { [key: string]: { gestural: number; independent: number; modeling: number; physical: number; verbal: number } } = {};
+
+    filteredStudentPromptData.forEach((sessionPrompt) => {
+        const sessionDate = sessionPrompt.timestamp.toDate();
+
+        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+            const { prompt } = trialPrompt;
+
+            const formattedDate = sessionDate.toLocaleDateString();
+
+            if (!dailyData[formattedDate]) {
+                dailyData[formattedDate] = {
+                    gestural: 0,
+                    independent: 0,
+                    modeling: 0,
+                    physical: 0,
+                    verbal: 0,
+                };
+            }
+
+            switch (prompt) {
+                case "Gestural":
+                    dailyData[formattedDate].gestural += 1;
+                    break;
+                case "Independent":
+                    dailyData[formattedDate].independent += 1;
+                    break;
+                case "Modeling":
+                    dailyData[formattedDate].modeling += 1;
+                    break;
+                case "Physical":
+                    dailyData[formattedDate].physical += 1;
+                    break;
+                case "Verbal":
+                    dailyData[formattedDate].verbal += 1;
+                    break;
+                default:
+                    break;
+            }
+        });
+    });
+
+    Object.keys(dailyData).forEach(date => {
+        chartData.dateArray.push(date);
+        chartData.gesturalArray.push(dailyData[date].gestural);
+        chartData.independentArray.push(dailyData[date].independent);
+        chartData.modelingArray.push(dailyData[date].modeling);
+        chartData.physicalArray.push(dailyData[date].physical);
+        chartData.verbalArray.push(dailyData[date].verbal);
+    });
+
+    return chartData;
 }
 
 interface SessionInfo {
@@ -680,7 +829,7 @@ export async function getIndependentCardIds(studentId: string, studentPhase: str
 
     // Step 4: Filter cards by the 3 most recent sessions with at least 70% Independent prompts
     const resultCardIDs = Object.keys(cardSessionData).filter((cardID) => {
-        console.log(cardID)
+        // console.log(cardID)
         // Sort by session timestamp (most recent first)
         const sortedSessions = cardSessionData[cardID].sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
 
