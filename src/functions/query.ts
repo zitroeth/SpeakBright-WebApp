@@ -706,9 +706,13 @@ export function filterStudentChartData(studentPromptData: SessionPromptMap | nul
         const sessionDate = sessionPrompt.timestamp.toDate();
 
         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
-            const { prompt } = trialPrompt;
+            const { prompt, timestamp } = trialPrompt;
 
-            const formattedDate = sessionDate.toLocaleDateString();
+            const formattedDate = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
+                // ? `${String(timestamp.toDate().getHours()).padStart(2, '0')}:${String(timestamp.toDate().getMinutes()).padStart(2, '0')}`
+                ? timestamp.toDate().toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
+                : sessionDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', });
+            // : sessionDate.toLocaleDateString();
 
             if (!dailyData[formattedDate]) {
                 dailyData[formattedDate] = {
@@ -742,7 +746,22 @@ export function filterStudentChartData(studentPromptData: SessionPromptMap | nul
         });
     });
 
-    Object.keys(dailyData).forEach(date => {
+    // Object.keys(dailyData).forEach(date => {
+    //     chartData.dateArray.push(date);
+    //     chartData.gesturalArray.push(dailyData[date].gestural);
+    //     chartData.independentArray.push(dailyData[date].independent);
+    //     chartData.modelingArray.push(dailyData[date].modeling);
+    //     chartData.physicalArray.push(dailyData[date].physical);
+    //     chartData.verbalArray.push(dailyData[date].verbal);
+    // });
+
+    // Sort the dates in ascending order
+    const sortedDates = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
+        ? Object.keys(dailyData).sort((a, b) => new Date(`1970-01-01 ${a}`).valueOf() - new Date(`1970-01-01 ${b}`).valueOf())
+        : Object.keys(dailyData).sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf());
+
+    // Prepare arrays for the chart
+    sortedDates.forEach(date => {
         chartData.dateArray.push(date);
         chartData.gesturalArray.push(dailyData[date].gestural);
         chartData.independentArray.push(dailyData[date].independent);

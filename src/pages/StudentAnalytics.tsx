@@ -78,7 +78,15 @@ export default function StudentAnalytics() {
         if (value) {
             // Convert dayjs object to JavaScript Date
             const jsDate = value.toDate();
-            setPromptFilter({ ...promptFilter, startDate: jsDate });
+            // setPromptFilter({ ...promptFilter, startDate: jsDate });
+            setPromptFilter(prevFilter => {
+                const updatedFilter = { ...prevFilter, startDate: jsDate };
+
+                if (prevFilter.endDate === undefined) {
+                    updatedFilter.endDate = jsDate;
+                }
+                return updatedFilter;
+            });
         } else {
             setPromptFilter({ ...promptFilter, startDate: undefined });
         }
@@ -309,11 +317,13 @@ export default function StudentAnalytics() {
                                             ))} */}
                                         </Select>
                                     </FormControl>
-                                    <DatePicker label="Start Date" format="LL" sx={{ width: '150%' }} onChange={handleStartDateChange}
+                                    {/* <DatePicker label="Start Date" format="LL" sx={{ width: '150%' }} onChange={handleStartDateChange} */}
+                                    <DatePicker label="Start Date" format="LL" sx={{ width: '150%' }} value={promptFilter.startDate ? dayjs(promptFilter.startDate) : null} onChange={handleStartDateChange}
                                         slotProps={{
                                             field: { clearable: true, onClear: () => setStartDateCleared(true) },
                                         }} />
-                                    <DatePicker label="End Date" format="LL" sx={{ width: '150%' }} onChange={handleEndDateChange}
+                                    {/* <DatePicker label="End Date" format="LL" sx={{ width: '150%' }} onChange={handleEndDateChange} */}
+                                    <DatePicker label="End Date" format="LL" sx={{ width: '150%' }} value={promptFilter.endDate ? dayjs(promptFilter.endDate) : null} onChange={handleEndDateChange}
                                         slotProps={{
                                             field: { clearable: true, onClear: () => setEndDateCleared(true) },
                                         }} />
