@@ -73,6 +73,9 @@ export default function AddFavoriteCardDialog({ open, setOpen, favoriteCardCount
                     category: inputCategory,
                     imageUrl: undefined,
                     tapCount: 0,
+                    phase1_independence: false,
+                    phase2_independence: false,
+                    phase3_independence: false,
                     title: inputCardName,
                     userId: studentId,
                 }

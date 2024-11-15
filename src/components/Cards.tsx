@@ -77,6 +77,9 @@ export default function Cards(props: CardsProps) {
                 const card_data = {
                     category: inputCategory,
                     imageUrl: undefined,
+                    phase1_independence: false,
+                    phase2_independence: false,
+                    phase3_independence: false,
                     tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
@@ -87,6 +90,9 @@ export default function Cards(props: CardsProps) {
                 const card_data = {
                     category: inputCategory,
                     imageUrl: inputCardUrl,
+                    phase1_independence: false,
+                    phase2_independence: false,
+                    phase3_independence: false,
                     tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,

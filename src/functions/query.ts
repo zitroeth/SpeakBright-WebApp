@@ -84,6 +84,9 @@ export async function setCard(
     card_data: {
         category: string,
         imageUrl?: string,
+        phase1_independence: boolean,
+        phase2_independence: boolean,
+        phase3_independence: boolean,
         tapCount: number,
         title: string,
         userId: string,
@@ -102,12 +105,26 @@ export async function setCard(
     }
 }
 
+export type StudentCard = {
+    category: string,
+    imageUrl: string,
+    phase1_completion?: Timestamp,
+    phase2_completion?: Timestamp,
+    phase3_completion?: Timestamp,
+    phase1_independence?: boolean,
+    phase2_independence?: boolean,
+    phase3_independence?: boolean,
+    tapCount: number,
+    title: string,
+    userId: string,
+}
+
 export async function getStudentCards(studentId: string) {
     const cardQuery = await query(collection(db, "cards"), where("userId", "==", studentId));
     const cardSnapshot = await getDocs(cardQuery);
     const cardMap = new Map();
     cardSnapshot.forEach(doc => {
-        cardMap.set(doc.id, doc.data());
+        cardMap.set(doc.id, doc.data() as StudentCard);
     });
 
     return cardMap;
@@ -605,8 +622,21 @@ type ChartData = {
 //     }
 // }
 
+export type PhasePromptMap = Map<string, { session: SessionPromptMap }>;
 export type SessionPromptMap = Map<string, { timestamp: Timestamp, total_trials: number, trialPrompt: TrialPromptMap }>;
 export type TrialPromptMap = Map<string, { cardID: string, prompt: string, timestamp: Timestamp }>;
+
+export async function getPhasesPromptData(studentID: string): Promise<PhasePromptMap> {
+    const phasePromptMap: PhasePromptMap = new Map();
+
+    const phaseRef = collection(db, `activity_log/${studentID}/phase`);
+    const phaseSnapshot = await getDocs(phaseRef);
+
+    for (const phaseDoc of phaseSnapshot.docs) {
+        phasePromptMap.set(phaseDoc.id, { session: await getStudentPromptData(studentID, phaseDoc.id) });
+    }
+    return phasePromptMap;
+}
 
 export async function getStudentPromptData(studentId: string, studentPhase: string): Promise<SessionPromptMap> {
     const sessionPromptMap: SessionPromptMap = new Map();
@@ -1020,4 +1050,162 @@ export async function getCardId(category: string, imageUrl: string, tapCount: nu
     const cardDoc = await getDocs(cardDocQuery);
     console.log(cardDoc.docs)
     return cardDoc.docs[0].id as string;
+}
+
+// export async function getStudentPhaseDurationPieChart(studentId: string) {
+//     const phasesSnapshot = await getDocs(collection(db, "activity_log", studentId, "phase"));
+//     const phasesSnapshotMap = new Map<string, { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] }>();
+//     phasesSnapshot.forEach(doc => {
+//         phasesSnapshotMap.set(doc.id, doc.data() as { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] });
+//     });
+
+//     const phasesDuration = new Array<{ label: string | ((location: 'tooltip' | 'legend' | 'arc') => string), value: number }>();
+//     phasesSnapshotMap.forEach((phase, phaseId) => {
+//         const entryTimestamps = phase.entryTimestamps;
+//         const exitTimestamps = phase.exitTimestamps;
+//         if (entryTimestamps.length > exitTimestamps.length)
+//             exitTimestamps.push(Timestamp.now());
+
+//         let totalDuration = 0;
+//         entryTimestamps.forEach((entryTimestamp, index) => {
+//             const exitTimestamp = exitTimestamps[index];
+//             totalDuration += exitTimestamp.toMillis() - entryTimestamp.toMillis();
+//         });
+
+//         phasesDuration.push({ label: (location) => (location === 'legend') ? `Phase ${phaseId} - ${convertMillisecondsToReadableString(totalDuration)}` : `Phase ${phaseId}`, value: totalDuration });
+//     });
+
+//     return phasesDuration;
+// }
+
+export async function getStudentPhaseDuration(studentId: string) {
+    const phasesSnapshot = await getDocs(collection(db, "activity_log", studentId, "phase"));
+    const phasesSnapshotMap = new Map<string, { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] }>();
+    phasesSnapshot.forEach(doc => {
+        phasesSnapshotMap.set(doc.id, doc.data() as { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] });
+    });
+
+    const phasesDuration = new Array<{ label: string, value: number }>();
+    phasesSnapshotMap.forEach((phase, phaseId) => {
+        const entryTimestamps = phase.entryTimestamps;
+        const exitTimestamps = phase.exitTimestamps;
+        if (entryTimestamps.length > exitTimestamps.length)
+            exitTimestamps.push(Timestamp.now());
+
+        let totalDuration = 0;
+        entryTimestamps.forEach((entryTimestamp, index) => {
+            const exitTimestamp = exitTimestamps[index];
+            totalDuration += exitTimestamp.toMillis() - entryTimestamp.toMillis();
+        });
+
+        phasesDuration.push({ label: phaseId, value: totalDuration });
+    });
+
+    return phasesDuration;
+}
+
+export function convertMillisecondsToReadableString(milliseconds: number): string {
+    const msInSecond = 1000;
+    const msInMinute = 60 * msInSecond;
+    const msInHour = 60 * msInMinute;
+    const msInDay = 24 * msInHour;
+    const msInWeek = 7 * msInDay;
+    const msInMonth = 30 * msInDay; // Approximation for months
+
+    const months = Math.floor(milliseconds / msInMonth);
+    milliseconds %= msInMonth;
+
+    const weeks = Math.floor(milliseconds / msInWeek);
+    milliseconds %= msInWeek;
+
+    const days = Math.floor(milliseconds / msInDay);
+    milliseconds %= msInDay;
+
+    const hours = Math.floor(milliseconds / msInHour);
+    milliseconds %= msInHour;
+
+    const minutes = Math.floor(milliseconds / msInMinute);
+    milliseconds %= msInMinute;
+
+    const seconds = Math.floor(milliseconds / msInSecond);
+
+    // Build the string with at most two components
+    const parts: string[] = [];
+    if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
+    if (weeks > 0) parts.push(`${weeks} week${weeks > 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+    if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
+    if (seconds > 0) parts.push(`${seconds} second${seconds > 1 ? 's' : ''}`);
+
+    // Combine at most two parts
+    return parts.slice(0, 2).join(', ');
+}
+
+type StudentProgressScore = {
+    date: string;
+    score: number;
+    variation: number;
+}
+
+const promptWeights = new Map<string, number>([
+    ['Independent', 1],
+    ['Verbal', 0.75],
+    ['Gestural', 0.5],
+    ['Modeling', 0.25],
+    ['Physical', 0.5],
+]);
+
+export function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
+    const studentProgressScores: StudentProgressScore[] = [];
+
+    sessionPromptData?.forEach((sessionPrompt) => {
+        const sessionDate = sessionPrompt.timestamp.toDate();
+        let totalScore = 0;
+        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+            const promptWeight = promptWeights.get(trialPrompt.prompt);
+            if (promptWeight) {
+                totalScore += promptWeight;
+            }
+        });
+        studentProgressScores.push({
+            date: sessionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', }),
+            score: totalScore,
+            variation: 0,
+        });
+    });
+
+    for (let i = 1; i < studentProgressScores.length; i++) {
+        const currentScore = studentProgressScores[i].score;
+        const previousScore = studentProgressScores[i - 1].score;
+
+        // Avoid division by zero and calculate the percentage change
+        if (previousScore !== 0) {
+            const percentageChange = ((currentScore - previousScore) / previousScore) * 100;
+            studentProgressScores[i].variation = percentageChange;
+        } else {
+            // If the previous score is zero, set variation to null or another indicator
+            studentProgressScores[i].variation = 0;
+        }
+    }
+
+    return studentProgressScores;
+}
+
+export function getFirstCardPromptInstance(studentPromptData: SessionPromptMap | null) {
+    const firstCardInstances = new Map<string, Date>();
+    if (!studentPromptData) return firstCardInstances;
+
+    studentPromptData.forEach((sessionPrompt) => {
+        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+            const existingDate = firstCardInstances.get(trialPrompt.cardID);
+            const trialDate = trialPrompt.timestamp.toDate();
+
+            if (!existingDate || trialDate.valueOf() < existingDate.valueOf()) {
+                firstCardInstances.set(trialPrompt.cardID, trialDate);
+            }
+        });
+    });
+
+    return firstCardInstances;
 }
