@@ -1142,11 +1142,7 @@ export function convertMillisecondsToReadableString(milliseconds: number): strin
     return parts.slice(0, 2).join(', ');
 }
 
-type StudentProgressScore = {
-    date: string;
-    score: number;
-    variation: number;
-}
+
 
 const promptWeights = new Map<string, number>([
     ['Independent', 1],
@@ -1156,11 +1152,60 @@ const promptWeights = new Map<string, number>([
     ['Physical', 0.5],
 ]);
 
+// type StudentProgressScore = {
+//     date: string;
+//     score: number;
+//     variation: number;
+// }
+
+// export function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
+//     const studentProgressScores: StudentProgressScore[] = [];
+
+//     sessionPromptData?.forEach((sessionPrompt) => {
+//         const sessionDate = sessionPrompt.timestamp.toDate();
+//         let totalScore = 0;
+//         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+//             const promptWeight = promptWeights.get(trialPrompt.prompt);
+//             if (promptWeight) {
+//                 totalScore += promptWeight;
+//             }
+//         });
+//         studentProgressScores.push({
+//             date: sessionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', }),
+//             score: totalScore,
+//             variation: 0,
+//         });
+//     });
+
+//     for (let i = 1; i < studentProgressScores.length; i++) {
+//         const currentScore = studentProgressScores[i].score;
+//         const previousScore = studentProgressScores[i - 1].score;
+
+//         // Avoid division by zero and calculate the percentage change
+//         if (previousScore !== 0) {
+//             const percentageChange = ((currentScore - previousScore) / previousScore) * 100;
+//             studentProgressScores[i].variation = percentageChange;
+//         } else {
+//             // If the previous score is zero, set variation to null or another indicator
+//             studentProgressScores[i].variation = 0;
+//         }
+//     }
+
+//     return studentProgressScores;
+// }
+
+type StudentProgressScore = {
+    date: Date;
+    score: number;
+}
+
 export function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
-    const studentProgressScores: StudentProgressScore[] = [];
+    let studentProgressScores: StudentProgressScore[] = [];
 
     sessionPromptData?.forEach((sessionPrompt) => {
         const sessionDate = sessionPrompt.timestamp.toDate();
+        sessionDate.setHours(0, 0, 0, 0);
+
         let totalScore = 0;
         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
             const promptWeight = promptWeights.get(trialPrompt.prompt);
@@ -1169,43 +1214,77 @@ export function getStudentProgressScore(sessionPromptData: SessionPromptMap | nu
             }
         });
         studentProgressScores.push({
-            date: sessionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', }),
+            date: sessionDate,
             score: totalScore,
-            variation: 0,
         });
     });
+    console.log(studentProgressScores)
 
-    for (let i = 1; i < studentProgressScores.length; i++) {
-        const currentScore = studentProgressScores[i].score;
-        const previousScore = studentProgressScores[i - 1].score;
+    //forward fill here
+    studentProgressScores = forwardFill(studentProgressScores);
+    // console.log(studentProgressScores)
+    // console.log(studentProgressScores.forEach(d => console.log(d.score)))
 
-        // Avoid division by zero and calculate the percentage change
-        if (previousScore !== 0) {
-            const percentageChange = ((currentScore - previousScore) / previousScore) * 100;
-            studentProgressScores[i].variation = percentageChange;
-        } else {
-            // If the previous score is zero, set variation to null or another indicator
-            studentProgressScores[i].variation = 0;
-        }
+    // // Calculate EMA for the scores
+    const scores = studentProgressScores.map(d => d.score);
+    const emaScores = EMACalc(scores, scores.length);
+
+    // Update the progress scores with EMA and variation
+    for (let i = 0; i < studentProgressScores.length; i++) {
+        studentProgressScores[i].score = emaScores[i];
     }
+    // console.log(studentProgressScores);
 
     return studentProgressScores;
 }
 
-export function getFirstCardPromptInstance(studentPromptData: SessionPromptMap | null) {
-    const firstCardInstances = new Map<string, Date>();
-    if (!studentPromptData) return firstCardInstances;
+function forwardFill(scores: StudentProgressScore[]): StudentProgressScore[] {
+    if (scores.length === 0) return scores;
 
-    studentPromptData.forEach((sessionPrompt) => {
-        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
-            const existingDate = firstCardInstances.get(trialPrompt.cardID);
-            const trialDate = trialPrompt.timestamp.toDate();
+    const filledScores: StudentProgressScore[] = [];
+    const minDate = new Date(Math.min(...scores.map(d => d.date.getTime())));
+    const maxDate = new Date(Math.max(...scores.map(d => d.date.getTime())));
 
-            if (!existingDate || trialDate.valueOf() < existingDate.valueOf()) {
-                firstCardInstances.set(trialPrompt.cardID, trialDate);
-            }
-        });
-    });
+    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+        const existingScore = scores.find(score => score.date.getTime() === d.getTime());
+        if (existingScore) {
+            filledScores.push(existingScore);
+        } else {
+            const previousScore = filledScores[filledScores.length - 1];
+            filledScores.push({
+                date: new Date(d),
+                score: previousScore ? previousScore.score : 0,
+            });
+        }
+    }
 
-    return firstCardInstances;
+    return filledScores;
 }
+
+function EMACalc(mArray: number[], mRange: number): number[] {
+    const k = 2 / (mRange + 1);
+    const emaArray: number[] = [mArray[0]]; // Initialize with the first value
+
+    for (let i = 1; i < mArray.length; i++) {
+        emaArray.push(mArray[i] * k + emaArray[i - 1] * (1 - k));
+    }
+    return emaArray;
+}
+
+// export function getFirstCardPromptInstance(studentPromptData: SessionPromptMap | null) {
+//     const firstCardInstances = new Map<string, Date>();
+//     if (!studentPromptData) return firstCardInstances;
+
+//     studentPromptData.forEach((sessionPrompt) => {
+//         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+//             const existingDate = firstCardInstances.get(trialPrompt.cardID);
+//             const trialDate = trialPrompt.timestamp.toDate();
+
+//             if (!existingDate || trialDate.valueOf() < existingDate.valueOf()) {
+//                 firstCardInstances.set(trialPrompt.cardID, trialDate);
+//             }
+//         });
+//     });
+
+//     return firstCardInstances;
+// }

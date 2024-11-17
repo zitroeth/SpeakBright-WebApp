@@ -5,7 +5,8 @@ import { useParams } from 'react-router-dom';
 import { BarChart, Gauge, LineChart, } from '@mui/x-charts';
 import { Box, Card, Chip, Stack } from '@mui/material';
 import { Timestamp } from 'firebase/firestore';
-import MuiGauge from '../components/MuiGauge';
+import MuiGauge from '../components/PhaseProgress';
+import PhaseProgress from '../components/PhaseProgress';
 
 interface StudentInfo {
     birthday: Timestamp;
@@ -37,17 +38,17 @@ interface StudentInfo {
 //     timeTapped: Timestamp;
 // }
 
-// type StudentCard = {
-//     category: string;
-//     imageUrl: string;
-//     isFavorite?: boolean;
-//     phase1_independence?: boolean;
-//     phase2_independence?: boolean;
-//     phase3_independence?: boolean;
-//     tapCount: number;
-//     title: string;
-//     userId: string;
-// }
+type StudentCard = {
+    category: string;
+    imageUrl: string;
+    isFavorite?: boolean;
+    phase1_independence?: boolean;
+    phase2_independence?: boolean;
+    phase3_independence?: boolean;
+    tapCount: number;
+    title: string;
+    userId: string;
+}
 
 // const promptPalette = ["#ff6260", "#fcc260", "#aae173", "#6c8dff", "#9e7cff"];
 // const phaseColors = ["#7bb242", "#df40fa", "#05a8f3", "#ea524f"];
@@ -68,7 +69,6 @@ export default function StudentAnalytics() {
     // const [startDatecleared, setStartDateCleared] = useState<boolean>(false);
     // const [endDatecleared, setEndDateCleared] = useState<boolean>(false);
     const [phasesDuration, setPhasesDuration] = useState<Array<{ label: string, value: number }>>([]);
-    const [firstPromptInstances, setFirstCardPromptInstance] = useState<Map<string, Date>>(new Map<string, Date>());
     const [phasesPromptData, setPhasesPromptData] = useState<PhasePromptMap | null>(null);
     const [studentCards, setStudentCards] = useState<Map<string, StudentCard>>();
 
@@ -186,15 +186,6 @@ export default function StudentAnalytics() {
 
     }, [studentId, studentInfo?.phase]);
 
-    useEffect(() => {
-        const fetchFirstCardPromptInstance = async () => {
-            const fetchedFirstCardPromptInstance = await getFirstCardPromptInstance(studentPromptsData);
-            setFirstCardPromptInstance(fetchedFirstCardPromptInstance);
-        };
-
-        fetchFirstCardPromptInstance();
-    }, [studentPromptsData]);
-
     // useEffect(() => {
     //     studentPromptsCard.current = getCardIdsFromStudentPromptData(studentPromptsData);
     // }, [studentPromptsData]);
@@ -238,11 +229,7 @@ export default function StudentAnalytics() {
     changeLink();
 
     useEffect(() => {
-        console.log(firstPromptInstances)
-    }, [firstPromptInstances])
-
-    useEffect(() => {
-        console.log(phasesPromptData)
+        // console.log(phasesPromptData)
     }, [phasesPromptData]);
 
     return (
@@ -448,7 +435,7 @@ export default function StudentAnalytics() {
                             }}>
                             <Typography variant='h4' component='h4' mt={2} mx={2}>Student Progress Score</Typography>
 
-                            <LineChart //relative change formula
+                            {/* <LineChart //relative change formula
                                 dataset={studentProgressScores}
                                 colors={['#c5a4ed', '#790377']}
                                 xAxis={[{ dataKey: 'date', scaleType: 'band' }]}
@@ -469,43 +456,26 @@ export default function StudentAnalytics() {
                                     },
                                 }]}
                                 height={300}
+                            /> */}
+                            <LineChart //exponential moving average
+                                dataset={studentProgressScores}
+                                colors={['#c5a4ed', '#790377']}
+                                xAxis={[{ dataKey: 'date', scaleType: 'band' }]}
+                                series={[{
+                                    dataKey: 'score',
+                                    label: 'Score',
+                                    curve: 'linear',
+                                }]}
+                                height={300}
                             />
                         </Card>
                     </Box>
-                    <Box gap={2}
+                    <Box gap={2} my={4}
                         sx={{
-                            mt: 4,
                             display: 'flex',
                             width: '100%',
                         }}>
-
-                        {/* <Card
-                            elevation={4}
-                            sx={{
-                                p: 1,
-                                boxSizing: 'border-box',
-                                flex: '1 1 25%',
-                                minWidth: 'calc(90% / 4)',
-                                maxWidth: 'calc(100% / 4)',
-                            }}
-                        >
-                            <Typography variant='h4' component='h4' mt={2} mx={2}>Student Progress Score</Typography>
-                        </Card> */}
-                        {/* {phasesPromptData && Array.from(phasesPromptData.entries()).map(([key, data], index) => ( */}
-                        <Card
-                            elevation={4}
-                            sx={{
-                                p: 1,
-                                boxSizing: 'border-box',
-                                flex: '1 1 25%',
-                                minWidth: 'calc(90% / 4)',
-                                maxWidth: 'calc(100% / 4)',
-                            }}
-                        >
-                            <Typography variant='h4' component='h4' mt={2} mx={2}>{`Phase ${1} Progress`}</Typography>
-                            {/* <MuiGauge value={45} /> */}
-                        </Card>
-                        {/* ))} */}
+                        <PhaseProgress studentCards={studentCards as Map<string, StudentCard>} phasesPromptData={phasesPromptData as PhasePromptMap} />
                     </Box>
                 </>
                 :
