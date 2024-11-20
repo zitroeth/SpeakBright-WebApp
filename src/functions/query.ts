@@ -1194,48 +1194,117 @@ const promptWeights = new Map<string, number>([
 //     return studentProgressScores;
 // }
 
-type StudentProgressScore = {
+export type StudentProgressScore = {
     date: Date;
-    score: number;
+    score: number | null;
 }
 
-export function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
+export async function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
     let studentProgressScores: StudentProgressScore[] = [];
 
     sessionPromptData?.forEach((sessionPrompt) => {
         const sessionDate = sessionPrompt.timestamp.toDate();
         sessionDate.setHours(0, 0, 0, 0);
+        const indexIfSet = studentProgressScores.findIndex(d => d.date.getTime() === sessionDate.getTime());
 
-        let totalScore = 0;
+        // let trialPromptCount = 0;
+        let independentCount = 0;
         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
-            const promptWeight = promptWeights.get(trialPrompt.prompt);
-            if (promptWeight) {
-                totalScore += promptWeight;
-            }
+            trialPrompt.prompt === "Independent" ? independentCount++ : null;
+            // trialPromptCount++;
         });
-        studentProgressScores.push({
-            date: sessionDate,
-            score: totalScore,
-        });
+        // const totalScore = independentCount / trialPromptCount * 100;
+        const totalScore = independentCount ? independentCount / 20 * 100 : 0;
+
+        if (indexIfSet !== -1) {
+            studentProgressScores[indexIfSet].score ? studentProgressScores[indexIfSet].score += totalScore : null;
+        } else {
+            studentProgressScores.push({
+                date: sessionDate,
+                score: totalScore,
+            });
+        }
+
     });
-    console.log(studentProgressScores)
 
-    //forward fill here
-    studentProgressScores = forwardFill(studentProgressScores);
-    // console.log(studentProgressScores)
-    // console.log(studentProgressScores.forEach(d => console.log(d.score)))
+    // //forward fill here
+    // studentProgressScores = forwardFill(studentProgressScores);
+    studentProgressScores = fillMissingDates(studentProgressScores);
+    const imputedStudentProgressScores = await imputeMissingScores(studentProgressScores);
 
-    // // Calculate EMA for the scores
+    studentProgressScores = imputedStudentProgressScores.map(score => ({
+        date: new Date(score.date),
+        score: score.score ?? null,
+    }));
+
+    // // // Calculate EMA for the scores
+    // const scores = studentProgressScores.map(d => d.score);
+    // const emaScores = EMACalc(scores, scores.length);
+
+    // // Update the progress scores with EMA and variation
+    // for (let i = 0; i < studentProgressScores.length; i++) {
+    //     studentProgressScores[i].score = emaScores[i];
+    // }
+    // console.log(JSON.stringify(studentProgressScores));
+
     const scores = studentProgressScores.map(d => d.score);
+    const maScores = computeMovingAverage(scores, scores.length);
     const emaScores = EMACalc(scores, scores.length);
 
-    // Update the progress scores with EMA and variation
-    for (let i = 0; i < studentProgressScores.length; i++) {
-        studentProgressScores[i].score = emaScores[i];
-    }
-    // console.log(studentProgressScores);
+    const maProgressScores: StudentProgressScore[] = studentProgressScores.map((score, index) => ({
+        date: score.date,
+        score: maScores[index],
+    }));
 
-    return studentProgressScores;
+    const emaProgressScores: StudentProgressScore[] = studentProgressScores.map((score, index) => ({
+        date: score.date,
+        score: emaScores[index],
+    }));
+
+    // console.log(JSON.stringify(studentProgressScores));
+    console.log(JSON.stringify([studentProgressScores, maProgressScores,]));
+    return [studentProgressScores, maProgressScores, emaProgressScores];
+}
+
+function fillMissingDates(scores: StudentProgressScore[]): StudentProgressScore[] {
+    if (scores.length === 0) return scores;
+
+    const filledScores: StudentProgressScore[] = [];
+    const minDate = new Date(Math.min(...scores.map(d => d.date.getTime())));
+    const maxDate = new Date(Math.max(...scores.map(d => d.date.getTime())));
+
+    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+        const existingScore = scores.find(score => score.date.getTime() === d.getTime());
+        if (existingScore?.score !== undefined) {
+            filledScores.push(existingScore);
+        } else {
+            filledScores.push({
+                date: new Date(d),
+                score: null,
+            });
+        }
+    }
+
+    return filledScores;
+}
+
+async function imputeMissingScores(scores: StudentProgressScore[]): Promise<{ date: string, score: number | null }[]> {
+    try {
+        const response = await fetch('http://127.0.0.1:5174/impute-scores/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(scores.map(d => ({
+                date: d.date.toISOString().split('T')[0],
+                score: d.score
+            })))
+        });
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        return Promise.reject(error);
+    }
 }
 
 function forwardFill(scores: StudentProgressScore[]): StudentProgressScore[] {
@@ -1261,9 +1330,28 @@ function forwardFill(scores: StudentProgressScore[]): StudentProgressScore[] {
     return filledScores;
 }
 
-function EMACalc(mArray: number[], mRange: number): number[] {
+const getAverage = (data: (number | null)[]) => {
+    const validData = data.filter((val): val is number => val !== null);
+    return validData.reduce((acc, val) => acc + val, 0) / validData.length;
+};
+
+const computeMovingAverage = (data: (number | null)[], period: number): number[] => {
+    const movingAverages: number[] = [];
+
+    if (data.length === 0) return movingAverages;
+
+    // Adjusted logic for calculating a moving average over all data
+    for (let x = 0; x < data.length; x += 1) {
+        const currentPeriod = Math.min(period, x + 1); // Increase the window size progressively
+        movingAverages.push(getAverage(data.slice(0, currentPeriod)) as number);
+    }
+
+    return movingAverages;
+};
+
+function EMACalc(mArray: (number | null)[], mRange: number): number[] {
     const k = 2 / (mRange + 1);
-    const emaArray: number[] = [mArray[0]]; // Initialize with the first value
+    const emaArray: number[] = [mArray[0] as number]; // Initialize with the first value
 
     for (let i = 1; i < mArray.length; i++) {
         emaArray.push(mArray[i] * k + emaArray[i - 1] * (1 - k));

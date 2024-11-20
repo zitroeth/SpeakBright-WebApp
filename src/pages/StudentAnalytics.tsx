@@ -1,6 +1,6 @@
 import Typography from '@mui/material/Typography';
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { StudentCard, convertMillisecondsToReadableString, filterStudentChartData, getCardIdsFromStudentPromptData, getFirstCardPromptInstance, getPhasesPromptData, getStudentInfo, getStudentPhaseDuration, getStudentProgressScore, getStudentPromptData, PhasePromptMap, SessionPromptMap, getStudentCards } from '../functions/query';
+import { StudentCard, convertMillisecondsToReadableString, filterStudentChartData, getCardIdsFromStudentPromptData, getFirstCardPromptInstance, getPhasesPromptData, getStudentInfo, getStudentPhaseDuration, getStudentProgressScore, getStudentPromptData, PhasePromptMap, SessionPromptMap, getStudentCards, StudentProgressScore } from '../functions/query';
 import { useParams } from 'react-router-dom';
 import { BarChart, Gauge, LineChart, } from '@mui/x-charts';
 import { Box, Card, Chip, Stack } from '@mui/material';
@@ -71,6 +71,7 @@ export default function StudentAnalytics() {
     const [phasesDuration, setPhasesDuration] = useState<Array<{ label: string, value: number }>>([]);
     const [phasesPromptData, setPhasesPromptData] = useState<PhasePromptMap | null>(null);
     const [studentCards, setStudentCards] = useState<Map<string, StudentCard>>();
+    const [studentProgressScores, setStudentProgressScores] = useState<StudentProgressScore[][]>([[], [], []]);
 
     // const handlePromptFilterChange = ({ cardID, startDate, endDate }: { cardID: string, startDate: Date | undefined, endDate: Date | undefined }) => {
     //     setPromptFilter({ cardID, startDate, endDate });
@@ -186,12 +187,18 @@ export default function StudentAnalytics() {
 
     }, [studentId, studentInfo?.phase]);
 
+    useEffect(() => {
+        const fetchStudentProgressScores = async () => {
+            setStudentProgressScores(await getStudentProgressScore(studentPromptsData));
+        };
+        fetchStudentProgressScores();
+    }, [studentPromptsData]);
+
     // useEffect(() => {
     //     studentPromptsCard.current = getCardIdsFromStudentPromptData(studentPromptsData);
     // }, [studentPromptsData]);
 
     // const studentPromptsChart = useMemo(() => filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate), [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
-    const studentProgressScores = useMemo(() => getStudentProgressScore(studentPromptsData), [studentPromptsData]);
 
     // const inputArrays =
     // {
@@ -458,14 +465,18 @@ export default function StudentAnalytics() {
                                 height={300}
                             /> */}
                             <LineChart //exponential moving average
-                                dataset={studentProgressScores}
-                                colors={['#c5a4ed', '#790377']}
-                                xAxis={[{ dataKey: 'date', scaleType: 'band' }]}
-                                series={[{
-                                    dataKey: 'score',
-                                    label: 'Score',
-                                    curve: 'linear',
-                                }]}
+                                // dataset={studentProgressScores[0]}
+                                colors={['#790377', '#c5a4ed', '#deccf5']}
+                                xAxis={[
+                                    { data: studentProgressScores[0].map((score) => score.date), scaleType: 'band' },
+                                    { data: studentProgressScores[1].map((score) => score.score), scaleType: 'band' },
+                                    { data: studentProgressScores[2].map((score) => score.score), scaleType: 'band' },
+                                ]}
+                                series={[
+                                    { data: studentProgressScores[0].map((score) => score.score), label: 'Score', curve: 'linear', },
+                                    { data: studentProgressScores[1].map((score) => score.score), label: 'Cumulative Moving Average', curve: 'linear', },
+                                    { data: studentProgressScores[2].map((score) => score.score), label: 'Exponential Moving Average', curve: 'linear', },
+                                ]}
                                 height={300}
                             />
                         </Card>
