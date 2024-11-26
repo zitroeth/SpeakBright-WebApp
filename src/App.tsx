@@ -13,8 +13,6 @@ import AdminHome from './pages/AdminHome';
 import AdminViewGuardians from './pages/AdminViewGuardians';
 import AdminViewGuardianStudents from './pages/AdminViewGuardianStudents';
 import StudentAnalytics from './pages/StudentAnalytics';
-import TestPDND from './pages/TestPDND';
-import TestDNDKit from './pages/TestDNDKit';
 
 function App() {
   return (
@@ -24,7 +22,6 @@ function App() {
           <NavBar />
           <Routes>
             <Route path="/Login" element={<Login />} />
-            <Route path="/Test" element={<TestDNDKit />} />
             <Route path="/Register" element={<Register />} />
 
             <Route path="/" element={

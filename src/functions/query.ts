@@ -14,15 +14,6 @@ export async function getStudents(guardianId: string) {
     return studentsMap;
 }
 
-interface StudentInfo {
-    birthday: Timestamp;
-    email: string;
-    name: string;
-    phase?: number;
-    userID: string;
-    userType: string;
-}
-
 // export async function getStudentInfo(studentId: string) {
 //     const docSnap = await getDoc(doc(db, "users", studentId));
 //     let studentInfo = null;
@@ -34,6 +25,15 @@ interface StudentInfo {
 
 //     return studentInfo;
 // }
+
+export type StudentInfo = {
+    birthday: Timestamp;
+    email: string;
+    name: string;
+    phase: number;
+    userID: string;
+    userType: string;
+}
 
 export async function getStudentInfo(studentId: string): Promise<StudentInfo> {
     const docSnap = await getDoc(doc(db, "users", studentId));
@@ -49,7 +49,7 @@ export async function getStudentInfo(studentId: string): Promise<StudentInfo> {
         birthday: data.birthday as Timestamp,
         email: data.email as string,
         name: data.name as string,
-        phase: data.phase ? (data.phase as number) : undefined,
+        phase: data.phase as number,
         userID: data.userID as string,
         userType: data.userType as string,
     };
@@ -108,6 +108,7 @@ export async function setCard(
 export type StudentCard = {
     category: string,
     imageUrl: string,
+    isFavorite?: boolean,
     phase1_completion?: Timestamp,
     phase2_completion?: Timestamp,
     phase3_completion?: Timestamp,
@@ -622,8 +623,8 @@ type ChartData = {
 //     }
 // }
 
-export type PhasePromptMap = Map<string, { session: SessionPromptMap }>;
-export type SessionPromptMap = Map<string, { timestamp: Timestamp, total_trials: number, trialPrompt: TrialPromptMap }>;
+export type PhasePromptMap = Map<string, { entryTimestamps?: Timestamp[], exitTimestamps?: Timestamp[], session: SessionPromptMap }>;
+export type SessionPromptMap = Map<string, { timestamp: Timestamp, independentCount: number, totalTaps: number, trialPrompt: TrialPromptMap }>;
 export type TrialPromptMap = Map<string, { cardID: string, prompt: string, timestamp: Timestamp }>;
 
 export async function getPhasesPromptData(studentID: string): Promise<PhasePromptMap> {
@@ -633,7 +634,12 @@ export async function getPhasesPromptData(studentID: string): Promise<PhasePromp
     const phaseSnapshot = await getDocs(phaseRef);
 
     for (const phaseDoc of phaseSnapshot.docs) {
-        phasePromptMap.set(phaseDoc.id, { session: await getStudentPromptData(studentID, phaseDoc.id) });
+        phasePromptMap.set(phaseDoc.id,
+            {
+                entryTimestamps: phaseDoc.get('entryTimestamps') as Timestamp[],
+                exitTimestamps: phaseDoc.get('exitTimestamps') as Timestamp[],
+                session: await getStudentPromptData(studentID, phaseDoc.id)
+            });
     }
     return phasePromptMap;
 }
@@ -657,7 +663,7 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
             });
         }
 
-        sessionPromptMap.set(sessionDoc.id, { timestamp: sessionDoc.data().timestamp as Timestamp, total_trials: sessionDoc.data().total_trials as number, trialPrompt: trialPromptMap });
+        sessionPromptMap.set(sessionDoc.id, { timestamp: sessionDoc.data().timestamp as Timestamp, independentCount: sessionDoc.data().independentCount as number, totalTaps: sessionDoc.data().totalTaps as number, trialPrompt: trialPromptMap });
 
     }
     return sessionPromptMap;
@@ -1052,31 +1058,31 @@ export async function getCardId(category: string, imageUrl: string, tapCount: nu
     return cardDoc.docs[0].id as string;
 }
 
-// export async function getStudentPhaseDurationPieChart(studentId: string) {
-//     const phasesSnapshot = await getDocs(collection(db, "activity_log", studentId, "phase"));
-//     const phasesSnapshotMap = new Map<string, { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] }>();
-//     phasesSnapshot.forEach(doc => {
-//         phasesSnapshotMap.set(doc.id, doc.data() as { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] });
-//     });
+export async function getStudentPhaseDurationPieChart(studentId: string) {
+    const phasesSnapshot = await getDocs(collection(db, "activity_log", studentId, "phase"));
+    const phasesSnapshotMap = new Map<string, { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] }>();
+    phasesSnapshot.forEach(doc => {
+        phasesSnapshotMap.set(doc.id, doc.data() as { entryTimestamps: Timestamp[], exitTimestamps: Timestamp[] });
+    });
 
-//     const phasesDuration = new Array<{ label: string | ((location: 'tooltip' | 'legend' | 'arc') => string), value: number }>();
-//     phasesSnapshotMap.forEach((phase, phaseId) => {
-//         const entryTimestamps = phase.entryTimestamps;
-//         const exitTimestamps = phase.exitTimestamps;
-//         if (entryTimestamps.length > exitTimestamps.length)
-//             exitTimestamps.push(Timestamp.now());
+    const phasesDuration = new Array<{ label: string | ((location: 'tooltip' | 'legend' | 'arc') => string), value: number }>();
+    phasesSnapshotMap.forEach((phase, phaseId) => {
+        const entryTimestamps = phase.entryTimestamps;
+        const exitTimestamps = phase.exitTimestamps;
+        if (entryTimestamps.length > exitTimestamps.length)
+            exitTimestamps.push(Timestamp.now());
 
-//         let totalDuration = 0;
-//         entryTimestamps.forEach((entryTimestamp, index) => {
-//             const exitTimestamp = exitTimestamps[index];
-//             totalDuration += exitTimestamp.toMillis() - entryTimestamp.toMillis();
-//         });
+        let totalDuration = 0;
+        entryTimestamps.forEach((entryTimestamp, index) => {
+            const exitTimestamp = exitTimestamps[index];
+            totalDuration += exitTimestamp.toMillis() - entryTimestamp.toMillis();
+        });
 
-//         phasesDuration.push({ label: (location) => (location === 'legend') ? `Phase ${phaseId} - ${convertMillisecondsToReadableString(totalDuration)}` : `Phase ${phaseId}`, value: totalDuration });
-//     });
+        phasesDuration.push({ label: (location) => (location === 'legend') ? `Phase ${phaseId} - ${convertMillisecondsToReadableString(totalDuration)}` : `Phase ${phaseId}`, value: totalDuration });
+    });
 
-//     return phasesDuration;
-// }
+    return phasesDuration;
+}
 
 export async function getStudentPhaseDuration(studentId: string) {
     const phasesSnapshot = await getDocs(collection(db, "activity_log", studentId, "phase"));
@@ -1200,163 +1206,75 @@ export type StudentProgressScore = {
 }
 
 export async function getStudentProgressScore(sessionPromptData: SessionPromptMap | null) {
-    let studentProgressScores: StudentProgressScore[] = [];
+    const dayPromptCounts: {
+        date: Date;
+        independentCount: number;
+        totalTaps: number;
+    }[] = [];
+    const studentProgressScores: StudentProgressScore[] = [];
 
     sessionPromptData?.forEach((sessionPrompt) => {
+        const { independentCount, totalTaps } = sessionPrompt;
         const sessionDate = sessionPrompt.timestamp.toDate();
         sessionDate.setHours(0, 0, 0, 0);
-        const indexIfSet = studentProgressScores.findIndex(d => d.date.getTime() === sessionDate.getTime());
 
-        // let trialPromptCount = 0;
-        let independentCount = 0;
-        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
-            trialPrompt.prompt === "Independent" ? independentCount++ : null;
-            // trialPromptCount++;
-        });
-        // const totalScore = independentCount / trialPromptCount * 100;
-        const totalScore = independentCount ? independentCount / 20 * 100 : 0;
-
+        const indexIfSet = dayPromptCounts.findIndex(d => d.date.getTime() === sessionDate.getTime());
         if (indexIfSet !== -1) {
-            studentProgressScores[indexIfSet].score ? studentProgressScores[indexIfSet].score += totalScore : null;
+            dayPromptCounts[indexIfSet].independentCount += independentCount
+            dayPromptCounts[indexIfSet].totalTaps += totalTaps
         } else {
-            studentProgressScores.push({
+            dayPromptCounts.push({
                 date: sessionDate,
-                score: totalScore,
+                independentCount: independentCount,
+                totalTaps: totalTaps,
             });
         }
 
     });
 
-    // //forward fill here
-    // studentProgressScores = forwardFill(studentProgressScores);
-    studentProgressScores = fillMissingDates(studentProgressScores);
-    const imputedStudentProgressScores = await imputeMissingScores(studentProgressScores);
-
-    studentProgressScores = imputedStudentProgressScores.map(score => ({
-        date: new Date(score.date),
-        score: score.score ?? null,
-    }));
-
-    // // // Calculate EMA for the scores
-    // const scores = studentProgressScores.map(d => d.score);
-    // const emaScores = EMACalc(scores, scores.length);
-
-    // // Update the progress scores with EMA and variation
-    // for (let i = 0; i < studentProgressScores.length; i++) {
-    //     studentProgressScores[i].score = emaScores[i];
-    // }
-    // console.log(JSON.stringify(studentProgressScores));
-
-    const scores = studentProgressScores.map(d => d.score);
-    const maScores = computeMovingAverage(scores, scores.length);
-    const emaScores = EMACalc(scores, scores.length);
-
-    const maProgressScores: StudentProgressScore[] = studentProgressScores.map((score, index) => ({
-        date: score.date,
-        score: maScores[index],
-    }));
-
-    const emaProgressScores: StudentProgressScore[] = studentProgressScores.map((score, index) => ({
-        date: score.date,
-        score: emaScores[index],
-    }));
-
-    // console.log(JSON.stringify(studentProgressScores));
-    console.log(JSON.stringify([studentProgressScores, maProgressScores,]));
-    return [studentProgressScores, maProgressScores, emaProgressScores];
-}
-
-function fillMissingDates(scores: StudentProgressScore[]): StudentProgressScore[] {
-    if (scores.length === 0) return scores;
-
-    const filledScores: StudentProgressScore[] = [];
-    const minDate = new Date(Math.min(...scores.map(d => d.date.getTime())));
-    const maxDate = new Date(Math.max(...scores.map(d => d.date.getTime())));
-
-    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
-        const existingScore = scores.find(score => score.date.getTime() === d.getTime());
-        if (existingScore?.score !== undefined) {
-            filledScores.push(existingScore);
-        } else {
-            filledScores.push({
-                date: new Date(d),
-                score: null,
-            });
-        }
-    }
-
-    return filledScores;
-}
-
-async function imputeMissingScores(scores: StudentProgressScore[]): Promise<{ date: string, score: number | null }[]> {
-    try {
-        const response = await fetch('http://127.0.0.1:5174/impute-scores/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(scores.map(d => ({
-                date: d.date.toISOString().split('T')[0],
-                score: d.score
-            })))
+    dayPromptCounts.forEach((dayPromptCount) => {
+        console.log(`independent count: ${dayPromptCount.independentCount}, total taps: ${dayPromptCount.totalTaps}`)
+        studentProgressScores.push({
+            date: dayPromptCount.date,
+            score: dayPromptCount.independentCount ? dayPromptCount.independentCount / dayPromptCount.totalTaps * 100 : 0
         });
-        const result = await response.json();
-        return result;
-    } catch (error) {
-        return Promise.reject(error);
-    }
-}
+    });
 
-function forwardFill(scores: StudentProgressScore[]): StudentProgressScore[] {
-    if (scores.length === 0) return scores;
+    // sessionPromptData?.forEach((sessionPrompt) => {
+    //     const sessionDate = sessionPrompt.timestamp.toDate();
+    //     sessionDate.setHours(0, 0, 0, 0);
+    //     const indexIfSet = studentProgressScores.findIndex(d => d.date.getTime() === sessionDate.getTime());
 
-    const filledScores: StudentProgressScore[] = [];
-    const minDate = new Date(Math.min(...scores.map(d => d.date.getTime())));
-    const maxDate = new Date(Math.max(...scores.map(d => d.date.getTime())));
+    //     let trialPromptCount = 0;
+    //     let independentCount = 0;
+    //     sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+    //         trialPrompt.prompt === "Independent" ? independentCount++ : null;
+    //         trialPromptCount++;
+    //     });
 
-    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
-        const existingScore = scores.find(score => score.date.getTime() === d.getTime());
-        if (existingScore) {
-            filledScores.push(existingScore);
-        } else {
-            const previousScore = filledScores[filledScores.length - 1];
-            filledScores.push({
-                date: new Date(d),
-                score: previousScore ? previousScore.score : 0,
-            });
-        }
-    }
+    //     const totalScore = independentCount ? independentCount / trialPromptCount * 100 : 0;
+    //     console.log(`trialpromt count: ${trialPromptCount}, total score: ${totalScore}`);
+    //     // const totalScore = independentCount ? independentCount / 20 * 100 : 0;
 
-    return filledScores;
-}
+    //     if (indexIfSet !== -1) {
+    //         studentProgressScores[indexIfSet].score ? studentProgressScores[indexIfSet].score += totalScore : null;
+    //     } else {
+    //         studentProgressScores.push({
+    //             date: sessionDate,
+    //             score: totalScore,
+    //         });
+    //     }
 
-const getAverage = (data: (number | null)[]) => {
-    const validData = data.filter((val): val is number => val !== null);
-    return validData.reduce((acc, val) => acc + val, 0) / validData.length;
-};
+    // });
 
-const computeMovingAverage = (data: (number | null)[], period: number): number[] => {
-    const movingAverages: number[] = [];
+    const sessionProgressScore: { sessionNumber: number, sessionScore: number }[] =
+        studentProgressScores.map((score, index) => ({
+            sessionNumber: index + 1,
+            sessionScore: score.score
+        }));
 
-    if (data.length === 0) return movingAverages;
-
-    // Adjusted logic for calculating a moving average over all data
-    for (let x = 0; x < data.length; x += 1) {
-        const currentPeriod = Math.min(period, x + 1); // Increase the window size progressively
-        movingAverages.push(getAverage(data.slice(0, currentPeriod)) as number);
-    }
-
-    return movingAverages;
-};
-
-function EMACalc(mArray: (number | null)[], mRange: number): number[] {
-    const k = 2 / (mRange + 1);
-    const emaArray: number[] = [mArray[0] as number]; // Initialize with the first value
-
-    for (let i = 1; i < mArray.length; i++) {
-        emaArray.push(mArray[i] * k + emaArray[i - 1] * (1 - k));
-    }
-    return emaArray;
+    console.log(JSON.stringify([studentProgressScores]));
+    return studentProgressScores;
 }
 
 // export function getFirstCardPromptInstance(studentPromptData: SessionPromptMap | null) {
@@ -1376,3 +1294,50 @@ function EMACalc(mArray: (number | null)[], mRange: number): number[] {
 
 //     return firstCardInstances;
 // }
+
+// Define input and output models
+export interface DataPoint {
+    timeTakenIndependence: number;  // The independence time in milliseconds
+}
+
+export interface PredictionRequest {
+    data: DataPoint[];
+    start: number;  // Start index for prediction
+    end: number;    // End index for prediction
+}
+
+export interface PredictionResponse {
+    predictedSum: number;
+}
+
+// Function to send data to the Python API using fetch
+export async function fetchExponentialSmoothingPrediction(data: DataPoint[], start: number, end: number): Promise<number> {
+    const url = "http://localhost:5174/simple-exponential-smoothing/";
+
+    try {
+        const requestBody: PredictionRequest = { data, start, end };
+
+        // Send POST request to the API using fetch
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        // Check if the response is OK
+        if (!response.ok) {
+            throw new Error(`Error: ${response.statusText}`);
+        }
+
+        // Parse the response JSON
+        const responseData: PredictionResponse = await response.json();
+
+        // Return the predicted sum
+        return responseData.predictedSum;
+    } catch (error) {
+        console.error("Error communicating with the API:", error);
+        throw error;
+    }
+}

@@ -86,6 +86,22 @@ export default function PhaseProgress({ phasesPromptData, studentCards }: PhaseP
                 return sum + timeDifference;
             }, 0) / independentCardsTimestamp.size;
 
+            const estimatedTimeOfPhaseCompletion = (() => {
+                // Extract all completion times with their differences
+                const completionTimes = Array.from(independentCardsTimestamp.values())
+                    .map(instance => instance.completion.toMillis() - instance.firstInstance.toMillis());
+
+                // Sort completion times in descending order (most recent first)
+                const mostRecentCompletionTimes = completionTimes.sort((a, b) => b - a).slice(0, 5);
+
+                // Calculate the average of the 5 most recent completion times
+                const averageRecentIndependenceTime = mostRecentCompletionTimes.reduce((sum, time) => sum + time, 0) / mostRecentCompletionTimes.length;
+
+                // Calculate the estimated time to complete the phase
+                const remainingCards = currentPhaseCardsLength - currentPhaseIndependentCardsLength;
+                return remainingCards * averageRecentIndependenceTime;
+            })();
+
             return (
                 <Card
                     elevation={4}
@@ -101,8 +117,10 @@ export default function PhaseProgress({ phasesPromptData, studentCards }: PhaseP
                     <Typography variant='h4' component='h4' my={2} mx={2}>{`Phase ${key} Progress`}</Typography>
                     <MuiGauge value={currentPhaseIndependentCardsLength / currentPhaseCardsLength * 100} fill={phaseNewColors[parseInt(currentPhase) - 1].bg} />
 
-                    <Typography variant='subtitle1' mt={4} mx={2}>Total independent cards: <strong>{currentPhaseIndependentCardsLength}/{currentPhaseCardsLength}</strong></Typography>
+                    <Typography variant='subtitle1' mt={4} mx={2}>Proficient cards: <strong>{currentPhaseIndependentCardsLength}</strong></Typography>
+                    <Typography variant='subtitle1' mx={2}>Total cards: <strong>{currentPhaseCardsLength}</strong></Typography>
                     <Typography variant='subtitle1' mx={2}>Average time for single card independence: <strong style={{ wordWrap: 'break-word' }}>{convertMillisecondsToReadableString(averageSingleCardIndependenceTime)}</strong></Typography>
+                    <Typography variant='subtitle1' mx={2}>Estimated time of phase completion: <strong style={{ wordWrap: 'break-word' }}>{convertMillisecondsToReadableString(estimatedTimeOfPhaseCompletion)}</strong></Typography>
                 </Card>
             );
         }));
