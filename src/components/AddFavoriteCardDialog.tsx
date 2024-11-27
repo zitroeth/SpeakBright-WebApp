@@ -99,7 +99,7 @@ export default function AddFavoriteCardDialog({ open, setOpen, favoriteCardCount
                 onClose={handleClose}
                 aria-describedby="alert-dialog-slide-description"
             >
-                <DialogTitle>{`Add 3-10 favorite cards (${favoriteCardCount}/10)`}</DialogTitle>
+                <DialogTitle>{`Add 10+ favorite cards (${favoriteCardCount}/10)`}</DialogTitle>
                 <DialogContent>
                     <DialogContentText id="alert-dialog-slide-description">
                         <Box display='flex' flexDirection='row' justifyContent='space-between' width={'100%'}>

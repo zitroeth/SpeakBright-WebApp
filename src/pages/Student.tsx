@@ -97,7 +97,7 @@ export default function Student() {
             try {
                 const newStudentFavoriteCardsCount = await getStudentFavoriteCardsCount(studentId as string);
                 favoriteCardsCount.current = newStudentFavoriteCardsCount;
-                if (favoriteCardsCount.current < 3) {
+                if (favoriteCardsCount.current < 10) {
                     setAddFavoriteCardDialog(true);
                     setTabValue(0);
                 }
