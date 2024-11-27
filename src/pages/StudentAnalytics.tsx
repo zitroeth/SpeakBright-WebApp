@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { convertMillisecondsToReadableString, fetchExponentialSmoothingPrediction, filterStudentChartData, getCardIdsFromStudentPromptData, getPhasesPromptData, getStudentCards, getStudentInfo, getStudentPromptData, PhasePromptMap, SessionPromptMap, StudentCard, StudentInfo } from "../functions/query";
+import { convertMillisecondsToReadableString, fetchExponentialSmoothingPrediction, filterStudentChartData, getCardIdsFromStudentPromptData, getCurrentlyLearningCard, getPhasesPromptData, getStudentCards, getStudentInfo, getStudentPromptData, PhasePromptMap, SessionPromptMap, StudentCard, StudentInfo } from "../functions/query";
 import { ThemeProvider } from "@emotion/react";
 import mainTheme from "../themes/Theme";
 import LinearProgress from "@mui/material/LinearProgress";
@@ -103,7 +103,7 @@ export default function StudentAnalytics() {
                         }}>
                         <PhaseProgress phasesPromptData={phasesPromptData as PhasePromptMap} studentCards={studentCards as Map<string, StudentCard>} />
 
-                        <CurrentlyLearningCard />
+                        <CurrentlyLearningCard studentId={ studentId as string} phase={studentInfo.phase.toString()} phasePromptData={phasesPromptData}/>
 
                     </Box>
 
@@ -180,7 +180,7 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
             if (!entryTimestamps) return { label: phaseId, value: 0 };
 
             // Ensure exitTimestamps has a matching length
-            const adjustedExitTimestamps = [...exitTimestamps];
+            const adjustedExitTimestamps = exitTimestamps ? [...exitTimestamps] : [];
             if (entryTimestamps.length > adjustedExitTimestamps.length) {
                 adjustedExitTimestamps.push(Timestamp.now());
             }
@@ -247,7 +247,7 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
     }, [phasesDuration, phasesPromptData, studentCards]);
 
     const completionDataArray = useMemo(() => {
-        const completionData: { completionDate: Date, timeTakenIndependence: number }[] = [];
+        const completionData: { phase: string, completionDate: Date, timeTakenIndependence: number }[] = [];
 
         phasesDuration.forEach((phase) => {
             const independentCardsTimestamp = new Map<string, { firstInstance: Timestamp, completion: Timestamp }>();
@@ -289,8 +289,9 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
             Array.from(independentCardsTimestamp.values()).forEach((instance) => {
                 const timeTakenIndependence = instance.completion.toMillis() - instance.firstInstance.toMillis();
                 completionData.push({
+                    phase: phase.label,
                     completionDate: new Date(instance.completion.toMillis()),
-                    timeTakenIndependence
+                    timeTakenIndependence: timeTakenIndependence,
                 });
             });
         });
@@ -305,10 +306,10 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
         const fetchPhasePredictionsSES = async () => {
             const predictions = await Promise.all(
                 phasesDuration.map(async (phase) => {
-                    const proficientCards = (independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0) + 1;
-                    const totalCards = phaseCards.find((element) => element.phase === phase.label)?.cards.length || 1;
+                    const proficientCards = (independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0);
+                    const totalCards = phaseCards.find((element) => element.phase === phase.label)?.cards.length || 0;
                     const prediction = await fetchExponentialSmoothingPrediction(
-                        completionDataArray,
+                        completionDataArray.filter((element) => element.phase === phase.label ),
                         proficientCards,
                         totalCards
                     );
@@ -341,7 +342,9 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                         )
                                         : 0}
                                     fill={phaseNewColors[parseInt(phase.label) - 1].bg} />
-                                <Typography variant='body1' mt={1} mx={2}>Estimated time to finish: <strong>{convertMillisecondsToReadableString(phasePredictionsSES.find(prediction => prediction.phase === phase.label)?.estimatedSum || 0)}</strong></Typography>
+                                <Typography variant='body1' mt={1} mx={2}>Estimated time to finish: <strong>{(phasePredictionsSES.find(prediction => prediction.phase === phase.label)?.estimatedSum >= 2)
+    ? convertMillisecondsToReadableString(phasePredictionsSES.find(prediction => prediction.phase === phase.label)?.estimatedSum || 0) 
+    : 'Need more sessions'}</strong></Typography>
                             </Card>
                             <Card elevation={4} key={`phase-progress-desc-${phase.label}`}
                                 sx={{
@@ -401,16 +404,65 @@ function MuiGauge({ value, fill }: { value: number, fill: string }) {
     );
 }
 
-function CurrentlyLearningCard() {
+function CurrentlyLearningCard({studentId, phase, phasePromptData}: {studentId: string, phase: string, phasePromptData: PhasePromptMap | null}) {
+    const [currentlyLearningCard, setCurrentlyLearningCard] = useState<StudentCard | null>(null);
+
+    useEffect(() => {
+        const fetchCurrentlyLearningCard = async () => {
+            try {
+                const newCurrentlyLearningCard = await getCurrentlyLearningCard(studentId as string, phase as string);
+                setCurrentlyLearningCard(newCurrentlyLearningCard);
+            } catch (error) {
+                console.error("Error fetching student card:", error);
+            }
+        }
+        fetchCurrentlyLearningCard();
+    });
+
+    // const getCardLearningTime = useMemo(() => {
+    //     phasePromptData?.forEach((phase) => {
+    //         phase.session.forEach((session) => {
+    //             session.trialPrompt.forEach((trial) => {
+    //                 if (trial.cardID === currentlyLearningCard?.cardID) {
+    //                     return trial.timestamp.toMillis();
+    //                 }
+    //             });
+    //         });
+    //     }
+    // }, []);
     return (
+        <>
+        { currentlyLearningCard ?
         <Box sx={{ gridRow: '1/3', gridColumn: '4/5' }}>
             <Card elevation={4}
                 sx={{
                     p: 1,
                 }}>
-                <Typography variant='h6' component='h6'>Currently Learning</Typography>
+                <Typography variant='h6' component='h6' sx={{ textAlign: 'center'}}>Currently Learning</Typography>
+                <Box sx={{ minHeight:'100'}}>               
+                    <img src={currentlyLearningCard.imageUrl} alt={currentlyLearningCard.title} 
+                    style={{ 
+                        display: 'block',
+                        margin: '4px auto',
+                        objectFit: 'contain', 
+                        // height: '10em',
+                        width: '10em',
+                        }}/>
+                    <Typography variant='body1' mt={1} mx={2}>Title: {currentlyLearningCard.title}</Typography>
+                    <Typography variant='body1' mt={1} mx={2}>Category: {currentlyLearningCard.category}</Typography>    
+                    </Box>
             </Card>
         </Box>
+        :
+        <>
+            <Skeleton variant="rectangular" height={'100%'} />
+            <Box>
+                <Skeleton />
+                <Skeleton width="60%" />
+            </Box>
+        </>    
+        }
+        </>
     );
 }
 
@@ -585,7 +637,8 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
                     flexDirection: 'column',
                     alignItems: 'center',
                     p: 2,
-                    overflowX: 'auto'
+                    overflowX: 'auto',
+                    width: 'min-content'
                 }}
             >
                 <Typography variant='h6' component='h6'>{`Prompts Distribution`}</Typography>
@@ -598,7 +651,14 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
                             faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
                         },
                     ]}
-                    height={160} width={400}
+                    slotProps={{ 
+                        legend: { 
+                            hidden: true,
+                    }}}
+                    sx={{
+                        mr: -10,
+                    }}
+                    height={200} width={270}
                 />
             </Card>
         </Box>

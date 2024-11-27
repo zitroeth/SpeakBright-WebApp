@@ -1111,6 +1111,7 @@ export async function getStudentPhaseDuration(studentId: string) {
 }
 
 export function convertMillisecondsToReadableString(milliseconds: number): string {
+    if(milliseconds===0) return "";
     const msInSecond = 1000;
     const msInMinute = 60 * msInSecond;
     const msInHour = 60 * msInMinute;
@@ -1340,4 +1341,45 @@ export async function fetchExponentialSmoothingPrediction(data: DataPoint[], sta
         console.error("Error communicating with the API:", error);
         throw error;
     }
+}
+
+export async function getCurrentlyLearningCard(studentId: string, phase: string): Promise<StudentCard> {
+    // Step 1: Get the latest session
+    const sessionRef = collection(db, "activity_log", studentId, "phase", phase, "session");
+    const sessionQuery = query(sessionRef, orderBy("timestamp", "desc"), limit(1));
+    const sessionSnapshot = await getDocs(sessionQuery);
+
+    if (sessionSnapshot.empty) {
+        throw new Error("No sessions found for the given student and phase.");
+    }
+
+    const latestSession = sessionSnapshot.docs[0]; // Get the latest session document
+
+    // Step 2: Query the "trialPrompt" subcollection of the latest session
+    const trialPromptRef = collection(latestSession.ref, "trialPrompt");
+    const trialPromptQuery = query(trialPromptRef, orderBy("timestamp", "desc"), limit(1));
+    const trialPromptSnapshot = await getDocs(trialPromptQuery);
+
+    if (trialPromptSnapshot.empty) {
+        throw new Error("No trial prompts found in the latest session.");
+    }
+
+    // Step 3: Get the `cardID` from the latest trial prompt
+    const latestTrialPrompt = trialPromptSnapshot.docs[0];
+    const cardID = latestTrialPrompt.get("cardID");
+
+    if (!cardID) {
+        throw new Error("cardID is missing in the latest trial prompt.");
+    }
+
+    // Step 4: Fetch the card document using the cardID
+    const cardDocRef = doc(db, "cards", cardID);
+    const cardSnapshot = await getDoc(cardDocRef);
+
+    if (!cardSnapshot.exists()) {
+        throw new Error(`Card with ID ${cardID} does not exist.`);
+    }
+
+    // Step 5: Return the card data
+    return { ...cardSnapshot.data() } as StudentCard;
 }
