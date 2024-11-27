@@ -166,11 +166,10 @@ export default function Student() {
                         </Typography>
                         <Typography variant="h6" component="h6"
                             sx={{
-                                textTransform: "capitalize",
                                 mt: '4px'
                             }}
                         >
-                            {`Student ID: ${studentInfo?.userID}`}
+                            {`Email: ${studentInfo?.email}`}
                         </Typography>
                     </Box>
 
@@ -192,12 +191,6 @@ export default function Student() {
                             }}
                         />
                         <Tab label="Cards" {...a11yProps(1)}
-                            sx={{
-                                // border: '1px solid #e8e8e8',
-                                textTransform: "capitalize",
-                            }}
-                        />
-                        <Tab label="Notes" {...a11yProps(2)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",

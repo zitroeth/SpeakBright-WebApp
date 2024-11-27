@@ -100,20 +100,6 @@ export default function GuardianHome() {
                             >
                                 {value['name']}
                             </Typography>
-                            <Typography
-                                variant="body1"
-                                component="div"
-                                sx={{
-                                    textTransform: "capitalize",
-                                    textAlign: 'center',
-                                    wordBreak: 'break-all',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    mt: '1em',
-                                }}
-                            >
-                                <b>Student ID:</b> {value['userID']}
-                            </Typography>
                         </Paper>
                     );
                 }
