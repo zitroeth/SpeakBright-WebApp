@@ -1111,7 +1111,7 @@ export async function getStudentPhaseDuration(studentId: string) {
 }
 
 export function convertMillisecondsToReadableString(milliseconds: number): string {
-    if(milliseconds===0) return "";
+    if (milliseconds === 0) return "";
     const msInSecond = 1000;
     const msInMinute = 60 * msInSecond;
     const msInHour = 60 * msInMinute;
