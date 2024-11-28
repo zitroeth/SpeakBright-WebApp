@@ -103,7 +103,7 @@ export default function StudentAnalytics() {
                         }}>
                         <PhaseProgress phasesPromptData={phasesPromptData as PhasePromptMap} studentCards={studentCards as Map<string, StudentCard>} />
 
-                        <CurrentlyLearningCard studentId={ studentId as string} phase={studentInfo.phase.toString()} phasePromptData={phasesPromptData}/>
+                        <CurrentlyLearningCard studentId={studentId as string} phase={studentInfo.phase.toString()} phasePromptData={phasesPromptData} />
 
                     </Box>
 
@@ -122,11 +122,13 @@ export default function StudentAnalytics() {
     )
 }
 
+type PhasePrediction = {
+    phase: string;
+    estimatedSum: number;
+};
+
 function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
-    const [phasePredictionsSES, setPhasePredictionsSES] = useState<{
-        phase: string;
-        estimatedSum: number; // in milliseconds
-    }[]>([]);
+    const [phasePredictionsSES, setPhasePredictionsSES] = useState<PhasePrediction[]>([]);
 
     const phaseCards = useMemo(() => { /* eslint-disable */
         if (!studentCards) return [];
@@ -309,24 +311,28 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                     const proficientCards = (independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0);
                     const totalCards = phaseCards.find((element) => element.phase === phase.label)?.cards.length || 0;
                     const prediction = await fetchExponentialSmoothingPrediction(
-                        completionDataArray.filter((element) => element.phase === phase.label ),
+                        completionDataArray.filter((element) => element.phase === phase.label),
                         proficientCards,
                         totalCards
                     );
                     return { phase: phase.label, estimatedSum: prediction };
                 })
             );
+            console.log(JSON.stringify(predictions));
             setPhasePredictionsSES(predictions);
         };
 
         fetchPhasePredictionsSES();
     }, [completionDataArray, phasesDuration, phaseCards, independentPhaseCards]);
 
+    useEffect(() => {
+        console.log(JSON.stringify(phasePredictionsSES));
+    }, [phasePredictionsSES]);
     return (
         <>
             {phasesPromptData && phasePredictionsSES ?
                 <>
-                    {phasesDuration.map((phase) => (
+                    {phasesDuration.filter(phase => phase.label !== '4').map((phase) => (
                         <>
                             <Card elevation={4} key={`phase-progress-main-${phase.label}`}
                                 sx={{
@@ -342,9 +348,18 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                         )
                                         : 0}
                                     fill={phaseNewColors[parseInt(phase.label) - 1].bg} />
-                                <Typography variant='body1' mt={1} mx={2}>Estimated time to finish: <strong>{(phasePredictionsSES.find(prediction => prediction.phase === phase.label)?.estimatedSum >= 2)
-    ? convertMillisecondsToReadableString(phasePredictionsSES.find(prediction => prediction.phase === phase.label)?.estimatedSum || 0) 
-    : 'Need more sessions'}</strong></Typography>
+                                <Typography variant='body1' mt={1} mx={2}>
+                                    Estimated time to finish: <strong>
+                                        {(() => {
+                                            const prediction = phasePredictionsSES.find(prediction => prediction.phase === phase.label);
+                                            if (prediction && prediction.estimatedSum > 0) {
+                                                console.log(`log phase${prediction.phase} estimate: ${prediction.estimatedSum}`)
+                                                return convertMillisecondsToReadableString(prediction.estimatedSum);
+                                            }
+                                            return 'Need more sessions';
+                                        })()}
+                                    </strong>
+                                </Typography>
                             </Card>
                             <Card elevation={4} key={`phase-progress-desc-${phase.label}`}
                                 sx={{
@@ -404,7 +419,7 @@ function MuiGauge({ value, fill }: { value: number, fill: string }) {
     );
 }
 
-function CurrentlyLearningCard({studentId, phase, phasePromptData}: {studentId: string, phase: string, phasePromptData: PhasePromptMap | null}) {
+function CurrentlyLearningCard({ studentId, phase, phasePromptData }: { studentId: string, phase: string, phasePromptData: PhasePromptMap | null }) {
     const [currentlyLearningCard, setCurrentlyLearningCard] = useState<StudentCard | null>(null);
 
     useEffect(() => {
@@ -432,36 +447,36 @@ function CurrentlyLearningCard({studentId, phase, phasePromptData}: {studentId: 
     // }, []);
     return (
         <>
-        { currentlyLearningCard ?
-        <Box sx={{ gridRow: '1/3', gridColumn: '4/5' }}>
-            <Card elevation={4}
-                sx={{
-                    p: 1,
-                }}>
-                <Typography variant='h6' component='h6' sx={{ textAlign: 'center'}}>Currently Learning</Typography>
-                <Box sx={{ minHeight:'100'}}>               
-                    <img src={currentlyLearningCard.imageUrl} alt={currentlyLearningCard.title} 
-                    style={{ 
-                        display: 'block',
-                        margin: '4px auto',
-                        objectFit: 'contain', 
-                        // height: '10em',
-                        width: '10em',
-                        }}/>
-                    <Typography variant='body1' mt={1} mx={2}>Title: {currentlyLearningCard.title}</Typography>
-                    <Typography variant='body1' mt={1} mx={2}>Category: {currentlyLearningCard.category}</Typography>    
+            {currentlyLearningCard ?
+                <Box sx={{ gridRow: '1/3', gridColumn: '4/5' }}>
+                    <Card elevation={4}
+                        sx={{
+                            p: 1,
+                        }}>
+                        <Typography variant='h6' component='h6' sx={{ textAlign: 'center' }}>Currently Learning</Typography>
+                        <Box sx={{ minHeight: '100' }}>
+                            <img src={currentlyLearningCard.imageUrl} alt={currentlyLearningCard.title}
+                                style={{
+                                    display: 'block',
+                                    margin: '4px auto',
+                                    objectFit: 'contain',
+                                    // height: '10em',
+                                    width: '10em',
+                                }} />
+                            <Typography variant='body1' mt={1} mx={2}>Title: {currentlyLearningCard.title}</Typography>
+                            <Typography variant='body1' mt={1} mx={2}>Category: {currentlyLearningCard.category}</Typography>
+                        </Box>
+                    </Card>
+                </Box>
+                :
+                <>
+                    <Skeleton variant="rectangular" height={'100%'} />
+                    <Box>
+                        <Skeleton />
+                        <Skeleton width="60%" />
                     </Box>
-            </Card>
-        </Box>
-        :
-        <>
-            <Skeleton variant="rectangular" height={'100%'} />
-            <Box>
-                <Skeleton />
-                <Skeleton width="60%" />
-            </Box>
-        </>    
-        }
+                </>
+            }
         </>
     );
 }
@@ -651,10 +666,11 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
                             faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
                         },
                     ]}
-                    slotProps={{ 
-                        legend: { 
+                    slotProps={{
+                        legend: {
                             hidden: true,
-                    }}}
+                        }
+                    }}
                     sx={{
                         mr: -10,
                     }}

@@ -922,7 +922,7 @@ export async function getStudentCardsUsingIds(studentId: string, cardIds: string
 }
 
 export async function getFavoriteCardIds(studentId: string) {
-    const cardQuery = await query(collection(db, "favorites", studentId, "cards"), orderBy("cardID", "asc"), limit(10));
+    const cardQuery = await query(collection(db, "favorites", studentId, "cards"), orderBy("cardID", "asc"));
     const cardSnapshot = await getDocs(cardQuery);
     const cardIds: string[] = [];
     cardSnapshot.forEach(doc => {
@@ -1111,7 +1111,7 @@ export async function getStudentPhaseDuration(studentId: string) {
 }
 
 export function convertMillisecondsToReadableString(milliseconds: number): string {
-    if (milliseconds === 0) return "";
+
     const msInSecond = 1000;
     const msInMinute = 60 * msInSecond;
     const msInHour = 60 * msInMinute;
