@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { convertMillisecondsToReadableString, fetchExponentialSmoothingPrediction, filterStudentChartData, getCardIdsFromStudentPromptData, getCurrentlyLearningCard, getPhasesPromptData, getStudentCards, getStudentInfo, getStudentPromptData, PhasePromptMap, SessionPromptMap, StudentCard, StudentInfo } from "../functions/query";
+import { ChartData, convertMillisecondsToReadableString, fetchExponentialSmoothingPrediction, filterStudentChartData, getCardIdsFromStudentPromptData, getCurrentlyLearningCard, getPhasesPromptData, getStudentCards, getStudentInfo, getStudentPromptData, PhasePromptMap, SessionPromptMap, StudentCard, StudentInfo } from "../functions/query";
 import { ThemeProvider } from "@emotion/react";
 import mainTheme from "../themes/Theme";
 import LinearProgress from "@mui/material/LinearProgress";
@@ -18,6 +18,16 @@ import Select, { SelectChangeEvent } from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
+import Button from "@mui/material/Button";
+import PageviewOutlinedIcon from '@mui/icons-material/PageviewOutlined';
+import Modal from "@mui/material/Modal";
+import Backdrop from "@mui/material/Backdrop";
+import Fade from "@mui/material/Fade";
+import CardMedia from "@mui/material/CardMedia";
+import CardContent from "@mui/material/CardContent";
+import Filter1Icon from '@mui/icons-material/Filter1';
+import Filter2Icon from '@mui/icons-material/Filter2';
+import Filter3Icon from '@mui/icons-material/Filter3';
 
 type PhaseProgressProps = {
     phasesPromptData: PhasePromptMap | null;
@@ -129,6 +139,14 @@ type PhasePrediction = {
 
 function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
     const [phasePredictionsSES, setPhasePredictionsSES] = useState<PhasePrediction[]>([]);
+    const [openPhaseModal, setOpenPhaseModal] = useState<string | null>(null);
+
+    const handleOpenPhaseModal = (phase: string) => {
+        setOpenPhaseModal(phase);
+    };
+    const handleClosePhaseModal = () => {
+        setOpenPhaseModal(null);
+    };
 
     const phaseCards = useMemo(() => { /* eslint-disable */
         if (!studentCards) return [];
@@ -353,7 +371,6 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                         {(() => {
                                             const prediction = phasePredictionsSES.find(prediction => prediction.phase === phase.label);
                                             if (prediction && prediction.estimatedSum > 0) {
-                                                console.log(`log phase${prediction.phase} estimate: ${prediction.estimatedSum}`)
                                                 return convertMillisecondsToReadableString(prediction.estimatedSum);
                                             }
                                             return 'Need more sessions';
@@ -365,8 +382,15 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                 sx={{
                                     p: 1,
                                     height: 'fit-content',
-                                    textAlign: 'end'
+                                    // textAlign: 'end'
                                 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', mb: 2 }}>
+                                    <ThemeProvider theme={mainTheme}>
+                                        <Button variant="contained" color="secondary" endIcon={<PageviewOutlinedIcon fontSize="large" />} onClick={() => handleOpenPhaseModal(phase.label)}>
+                                            View Phase Cards
+                                        </Button>
+                                    </ThemeProvider>
+                                </Box>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Cards: <strong>{(phaseCards.find((element) => element.phase === phase.label)?.cards.length || 0)}</strong></Typography>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Proficient Cards: <strong>{(independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0)}</strong></Typography>
                                 <Typography variant='body1' mt={1} mx={2}>Time Spent: <strong>{convertMillisecondsToReadableString(phasesDuration.find((element) => element.label === phase.label)?.value as number)}</strong></Typography>
@@ -374,6 +398,15 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                             </Card>
                         </>
                     ))}
+                    {openPhaseModal && (
+                        <PhaseTransitionsModal
+                            openPhaseModal={!!openPhaseModal}
+                            phase={openPhaseModal}
+                            phaseCards={new Map(phaseCards.find((element) => element.phase === openPhaseModal)?.cards.map(card => [card.cardId, card])) as Map<string, StudentCard>}
+                            independentPhaseCards={new Map(independentPhaseCards.find((element) => element.phase === openPhaseModal)?.independentCards.map(card => [card.cardId, card])) as Map<string, StudentCard>}
+                            handleClosePhaseModal={handleClosePhaseModal}
+                        />
+                    )}
 
                 </>
                 : <>
@@ -391,6 +424,126 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
         </>
 
     )
+}
+
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    height: '75vh',
+    width: '75vw',
+    bgcolor: 'background.paper',
+    borderRadius: '8px',
+    boxShadow: 12,
+    p: 4,
+};
+
+type PhaseTransitionsModalProps = {
+    openPhaseModal: boolean;
+    phase: string;
+    phaseCards: Map<string, StudentCard>;
+    independentPhaseCards: Map<string, StudentCard>;
+    handleClosePhaseModal: () => void;
+};
+
+function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, independentPhaseCards, handleClosePhaseModal }: PhaseTransitionsModalProps) {
+    const phaseCardsArray = useMemo(() => {
+        // return Array.from(phaseCards.entries()).map(([key, value]) => (
+        //     <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+        //         <CardMedia
+        //             sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
+        //             image={value.imageUrl}
+        //             title={value.title}
+        //         />
+        //         <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        //             <Typography gutterBottom variant="h5" component="h5" sx={{
+        //                 overflow: 'hidden',
+        //                 textOverflow: 'ellipsis',
+        //                 textWrap: 'nowrap'
+        //             }}>
+        //                 {value.title}
+        //             </Typography>
+        //             <Box>
+        //                 {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
+        //                 {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+        //                 {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+        //             </Box>
+        //         </CardContent>
+        //     </Card>
+        // ));
+        const phaseIndependenceKey = `phase${phase}_independence`;
+        return Array.from(phaseCards.entries())
+            .sort(([keyA, valueA], [keyB, valueB]) => {
+                const isIndependentA = valueA[phaseIndependenceKey];
+                const isIndependentB = valueB[phaseIndependenceKey];
+                if (isIndependentA && !isIndependentB) return -1;
+                if (!isIndependentA && isIndependentB) return 1;
+                return 0;
+            })
+            .map(([key, value]) => (
+                <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+                    <CardMedia
+                        sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
+                        image={value.imageUrl}
+                        title={value.title}
+                    />
+                    <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography gutterBottom variant="h5" component="h5" sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            textWrap: 'nowrap'
+                        }}>
+                            {value.title}
+                        </Typography>
+                        <Box>
+                            {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
+                            {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                            {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                        </Box>
+                    </CardContent>
+                </Card>
+            ));
+    }, [phaseCards]);
+
+    return (
+        <div>
+            <Modal
+                aria-labelledby="transition-modal-title"
+                aria-describedby="transition-modal-description"
+                open={openPhaseModal}
+                onClose={handleClosePhaseModal}
+                closeAfterTransition
+                slots={{ backdrop: Backdrop }}
+                slotProps={{
+                    backdrop: {
+                        timeout: 500,
+                    },
+                }}
+            >
+                <Fade in={openPhaseModal}>
+                    <Box sx={style}>
+                        <Typography id="transition-modal-title" variant="h6" component="h2">
+                            Phase {phase} Cards
+                        </Typography>
+                        <Box
+                            display="grid"
+                            gridTemplateColumns="repeat(auto-fill, minmax(18%, 1fr))"
+                            sx={{
+                                mt: '1%',
+                                height: '100%',
+                                width: '100%',
+                                overflowX: 'hidden',
+                                overflowY: 'auto',
+                            }}
+                        >
+                            {phaseCardsArray}
+                        </Box>
+                    </Box>
+                </Fade>
+            </Modal>
+        </div>
+    );
 }
 
 function MuiGauge({ value, fill }: { value: number, fill: string }) {
@@ -432,7 +585,7 @@ function CurrentlyLearningCard({ studentId, phase, phasePromptData }: { studentI
             }
         }
         fetchCurrentlyLearningCard();
-    });
+    }, [studentId, phase]);
 
     // const getCardLearningTime = useMemo(() => {
     //     phasePromptData?.forEach((phase) => {
@@ -561,7 +714,16 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
         fetchStudentPromptData();
     }, [studentInfo.userID, studentInfo.phase]);
 
-    const studentPromptsChart = useMemo(() => filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate), [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
+    // const studentPromptsChart = useMemo(
+    //     () =>
+    //         filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate)
+    //     , [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
+
+    const [studentPromptsChart, setStudentPromptsChart] = useState<ChartData | null>(null);
+    useEffect(() => {
+        const filteredStudentPromptsChart = filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate);
+        setStudentPromptsChart(filteredStudentPromptsChart);
+    }, [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
 
     const inputArrays =
     {

@@ -118,6 +118,7 @@ export type StudentCard = {
     tapCount: number,
     title: string,
     userId: string,
+    cardId?: string,
 }
 
 export async function getStudentCards(studentId: string) {
@@ -125,7 +126,7 @@ export async function getStudentCards(studentId: string) {
     const cardSnapshot = await getDocs(cardQuery);
     const cardMap = new Map();
     cardSnapshot.forEach(doc => {
-        cardMap.set(doc.id, doc.data() as StudentCard);
+        cardMap.set(doc.id, { ...doc.data(), cardId: doc.id } as StudentCard);
     });
 
     return cardMap;
@@ -490,7 +491,7 @@ export async function getStudentsForTable(guardianId: string) {
     }
 }
 
-type ChartData = {
+export type ChartData = {
     dateArray: string[];
     gesturalArray: number[];
     independentArray: number[];
@@ -691,6 +692,10 @@ export function filterStudentChartData(studentPromptData: SessionPromptMap | nul
         physicalArray: [],
         verbalArray: []
     } as ChartData;
+    console.log(`studentPromptData ${studentPromptData}`)
+    console.log(`cardId ${cardID}`)
+    console.log(`startDate ${startDate}`)
+    console.log(`endDate ${endDate}`)
 
     const filteredStudentPromptData: SessionPromptMap = new Map(studentPromptData);
 
@@ -805,7 +810,7 @@ export function filterStudentChartData(studentPromptData: SessionPromptMap | nul
         chartData.physicalArray.push(dailyData[date].physical);
         chartData.verbalArray.push(dailyData[date].verbal);
     });
-
+    console.log(`studentPromptsChart: ${JSON.stringify(chartData)}`);
     return chartData;
 }
 
