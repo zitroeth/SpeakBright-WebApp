@@ -28,6 +28,8 @@ import CardContent from "@mui/material/CardContent";
 import Filter1Icon from '@mui/icons-material/Filter1';
 import Filter2Icon from '@mui/icons-material/Filter2';
 import Filter3Icon from '@mui/icons-material/Filter3';
+import Divider from "@mui/material/Divider";
+import ButtonGroup from "@mui/material/ButtonGroup";
 
 type PhaseProgressProps = {
     phasesPromptData: PhasePromptMap | null;
@@ -35,7 +37,7 @@ type PhaseProgressProps = {
 }
 
 const phaseNewColors = [{ bg: '#b6dd8d', text: '#2a3716' }, { bg: '#f4b3ff', text: '#4f0341' }, { bg: '#94ddff', text: '#0e3677' }, { bg: '#fdacaa', text: '#4b0606' }];
-const promptPalette = ["#ff6260", "#fcc260", "#aae173", "#6c8dff", "#9e7cff"];
+const promptPalette = ["#9e7cff", "#6c8dff", "#aae173", "#fcc260", "#ff6260", "#6d6262"];
 
 
 export default function StudentAnalytics() {
@@ -113,12 +115,12 @@ export default function StudentAnalytics() {
                         }}>
                         <PhaseProgress phasesPromptData={phasesPromptData as PhasePromptMap} studentCards={studentCards as Map<string, StudentCard>} />
 
-                        <CurrentlyLearningCard studentId={studentId as string} phase={studentInfo.phase.toString()} phasePromptData={phasesPromptData} />
+                        <CurrentlyLearningCard studentId={studentId as string} phasePromptData={phasesPromptData} />
 
                     </Box>
 
                     <Box mt={4}>
-                        <ViewPrompts studentInfo={studentInfo as StudentInfo} studentCards={studentCards as Map<string, StudentCard>} />
+                        <ViewPrompts studentInfo={studentInfo as StudentInfo} studentCards={studentCards as Map<string, StudentCard>} phasePromptData={phasesPromptData} />
                     </Box>
 
                 </Box>
@@ -381,12 +383,13 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                             <Card elevation={4} key={`phase-progress-desc-${phase.label}`}
                                 sx={{
                                     p: 1,
-                                    height: 'fit-content',
+                                    height: 'auto',
                                     // textAlign: 'end'
                                 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', mb: 2 }}>
                                     <ThemeProvider theme={mainTheme}>
-                                        <Button variant="contained" color="secondary" endIcon={<PageviewOutlinedIcon fontSize="large" />} onClick={() => handleOpenPhaseModal(phase.label)}>
+                                        <Button variant="contained" color="secondary" endIcon={<PageviewOutlinedIcon fontSize="large" />} onClick={() => handleOpenPhaseModal(phase.label)}
+                                            sx={{ backgroundColor: phaseNewColors[parseInt(phase.label) - 1].bg, color: phaseNewColors[parseInt(phase.label) - 1].text, fontSize: '1em' }}>
                                             View Phase Cards
                                         </Button>
                                     </ThemeProvider>
@@ -403,7 +406,6 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                             openPhaseModal={!!openPhaseModal}
                             phase={openPhaseModal}
                             phaseCards={new Map(phaseCards.find((element) => element.phase === openPhaseModal)?.cards.map(card => [card.cardId, card])) as Map<string, StudentCard>}
-                            independentPhaseCards={new Map(independentPhaseCards.find((element) => element.phase === openPhaseModal)?.independentCards.map(card => [card.cardId, card])) as Map<string, StudentCard>}
                             handleClosePhaseModal={handleClosePhaseModal}
                         />
                     )}
@@ -437,74 +439,179 @@ const style = {
     borderRadius: '8px',
     boxShadow: 12,
     p: 4,
+    overflowY: 'auto',
 };
 
 type PhaseTransitionsModalProps = {
     openPhaseModal: boolean;
     phase: string;
     phaseCards: Map<string, StudentCard>;
-    independentPhaseCards: Map<string, StudentCard>;
     handleClosePhaseModal: () => void;
 };
 
-function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, independentPhaseCards, handleClosePhaseModal }: PhaseTransitionsModalProps) {
-    const phaseCardsArray = useMemo(() => {
-        // return Array.from(phaseCards.entries()).map(([key, value]) => (
-        //     <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
-        //         <CardMedia
-        //             sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
-        //             image={value.imageUrl}
-        //             title={value.title}
-        //         />
-        //         <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        //             <Typography gutterBottom variant="h5" component="h5" sx={{
-        //                 overflow: 'hidden',
-        //                 textOverflow: 'ellipsis',
-        //                 textWrap: 'nowrap'
-        //             }}>
-        //                 {value.title}
-        //             </Typography>
-        //             <Box>
-        //                 {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
-        //                 {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
-        //                 {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
-        //             </Box>
-        //         </CardContent>
-        //     </Card>
-        // ));
-        const phaseIndependenceKey = `phase${phase}_independence`;
-        return Array.from(phaseCards.entries())
-            .sort(([keyA, valueA], [keyB, valueB]) => {
-                const isIndependentA = valueA[phaseIndependenceKey];
-                const isIndependentB = valueB[phaseIndependenceKey];
-                if (isIndependentA && !isIndependentB) return -1;
-                if (!isIndependentA && isIndependentB) return 1;
-                return 0;
-            })
-            .map(([key, value]) => (
-                <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
-                    <CardMedia
-                        sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
-                        image={value.imageUrl}
-                        title={value.title}
-                    />
-                    <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography gutterBottom variant="h5" component="h5" sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            textWrap: 'nowrap'
-                        }}>
-                            {value.title}
-                        </Typography>
-                        <Box>
-                            {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
-                            {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
-                            {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
-                        </Box>
-                    </CardContent>
-                </Card>
-            ));
-    }, [phaseCards]);
+function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, handleClosePhaseModal }: PhaseTransitionsModalProps) {
+    const [phaseCardFiltered, setPhaseCardFiltered] = useState<{
+        learning: [string, StudentCard][];
+        completed: [string, StudentCard][];
+        future: [string, StudentCard][];
+    }>({
+        learning: [],
+        completed: [],
+        future: [],
+    });
+
+    useEffect(() => {
+        let learningPhaseFiltered: [string, StudentCard][] = [];
+        switch (phase) {
+            case '1':
+                learningPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.phase1_independence === false);
+                break;
+            case '2':
+                learningPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category !== 'Emotions' &&
+                    value.phase1_independence === true &&
+                    value.phase2_independence === false);
+                break;
+            case '3':
+                learningPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category === 'Emotions' &&
+                    value.phase1_independence === true &&
+                    value.phase3_independence === false);
+                break;
+            default:
+                break;
+        }
+        setPhaseCardFiltered((prev) => ({ ...prev, learning: learningPhaseFiltered }));
+    }, [phaseCards, phase]);
+
+    const learningPhaseCards = useMemo(() => {
+        return phaseCardFiltered.learning.map(([key, value]) =>
+        (
+            <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+                <CardMedia
+                    sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
+                    image={value.imageUrl}
+                    title={value.title}
+                />
+                <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography gutterBottom variant="h5" component="h5" sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        textWrap: 'nowrap'
+                    }}>
+                        {value.title}
+                    </Typography>
+                    <Box>
+                        {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
+                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                    </Box>
+                </CardContent>
+            </Card>
+        )
+        );
+    }, [phaseCardFiltered.learning]);
+
+    useEffect(() => {
+        let completedPhaseFiltered: [string, StudentCard][] = [];
+        switch (phase) {
+            case '1':
+                completedPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.phase1_independence === true);
+                break;
+            case '2':
+                completedPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category !== 'Emotions' &&
+                    value.phase2_independence === true);
+                break;
+            case '3':
+                completedPhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category === 'Emotions' &&
+                    value.phase3_independence === true);
+                break;
+            default:
+                break;
+        }
+        setPhaseCardFiltered((prev) => ({ ...prev, completed: completedPhaseFiltered }));
+    }, [phaseCards, phase]);
+
+    const completedPhaseCards = useMemo(() => {
+        return phaseCardFiltered.completed.map(([key, value]) =>
+        (
+            <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+                <CardMedia
+                    sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
+                    image={value.imageUrl}
+                    title={value.title}
+                />
+                <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography gutterBottom variant="h5" component="h5" sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        textWrap: 'nowrap'
+                    }}>
+                        {value.title}
+                    </Typography>
+                    <Box>
+                        {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
+                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                    </Box>
+                </CardContent>
+            </Card>
+        )
+        );
+    }, [phaseCardFiltered.completed]);
+
+    useEffect(() => {
+        let futurePhaseFiltered: [string, StudentCard][] = [];
+        switch (phase) {
+            case '1':
+                break;
+            case '2':
+                futurePhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category !== 'Emotions' &&
+                    value.phase1_independence === false);
+                break;
+            case '3':
+                futurePhaseFiltered = Array.from(phaseCards.entries()).filter(([key, value]) =>
+                    value.category === 'Emotions' &&
+                    value.phase1_independence === false);
+                break;
+            default:
+                break;
+        }
+        setPhaseCardFiltered((prev) => ({ ...prev, future: futurePhaseFiltered }));
+    }, [phaseCards, phase]);
+
+    const futurePhaseCards = useMemo(() => {
+        return phaseCardFiltered.future.map(([key, value]) =>
+        (
+            <Card key={key} data-category-type={value.category} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
+                <CardMedia
+                    sx={{ height: '15vh', width: '100%', objectFit: 'contain' }}
+                    image={value.imageUrl}
+                    title={value.title}
+                />
+                <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography gutterBottom variant="h5" component="h5" sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        textWrap: 'nowrap'
+                    }}>
+                        {value.title}
+                    </Typography>
+                    <Box>
+                        {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
+                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                    </Box>
+                </CardContent>
+            </Card>
+        )
+        );
+    }, [phaseCardFiltered.future]);
 
     return (
         <div>
@@ -523,22 +630,72 @@ function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, independentP
             >
                 <Fade in={openPhaseModal}>
                     <Box sx={style}>
-                        <Typography id="transition-modal-title" variant="h6" component="h2">
-                            Phase {phase} Cards
+                        <Typography id="transition-modal-title" variant="h4" component="h4">
+                            Phase {phase}
                         </Typography>
-                        <Box
-                            display="grid"
-                            gridTemplateColumns="repeat(auto-fill, minmax(18%, 1fr))"
-                            sx={{
-                                mt: '1%',
-                                height: '100%',
-                                width: '100%',
-                                overflowX: 'hidden',
-                                overflowY: 'auto',
-                            }}
-                        >
-                            {phaseCardsArray}
+
+                        <Box>
+                            <Divider />
+                            <Typography variant="h6" component="h6" mt={2}>
+                                Currently Learning Cards
+                            </Typography>
+                            <Box
+                                display="grid"
+                                gridTemplateColumns="repeat(4, 1fr)"
+                                sx={{
+                                    mt: '1%',
+                                    height: '100%',
+                                    width: '100%',
+                                    overflowX: 'hidden',
+                                    overflowY: 'auto',
+                                }}
+                            >
+                                {learningPhaseCards as React.ReactNode[]}
+                            </Box>
                         </Box>
+
+                        <Box>
+                            <Divider />
+                            <Typography variant="h6" component="h6" mt={2}>
+                                Completed Cards
+                            </Typography>
+                            <Box
+                                display="grid"
+                                gridTemplateColumns="repeat(4, 1fr)"
+                                sx={{
+                                    mt: '1%',
+                                    height: '100%',
+                                    width: '100%',
+                                    overflowX: 'hidden',
+                                    overflowY: 'auto',
+                                }}
+                            >
+                                {completedPhaseCards}
+                            </Box>
+                        </Box>
+
+                        {phase !== '1' && (
+                            <Box>
+                                <Divider />
+                                <Typography variant="h6" component="h6" mt={2}>
+                                    Future Cards
+                                </Typography>
+                                <Box
+                                    display="grid"
+                                    gridTemplateColumns="repeat(4, 1fr)"
+                                    sx={{
+                                        mt: '1%',
+                                        height: '100%',
+                                        width: '100%',
+                                        overflowX: 'hidden',
+                                        overflowY: 'auto',
+                                    }}
+                                >
+                                    {futurePhaseCards}
+                                </Box>
+                            </Box>
+                        )}
+
                     </Box>
                 </Fade>
             </Modal>
@@ -572,43 +729,62 @@ function MuiGauge({ value, fill }: { value: number, fill: string }) {
     );
 }
 
-function CurrentlyLearningCard({ studentId, phase, phasePromptData }: { studentId: string, phase: string, phasePromptData: PhasePromptMap | null }) {
-    const [currentlyLearningCard, setCurrentlyLearningCard] = useState<StudentCard | null>(null);
+function CurrentlyLearningCard({ studentId, phasePromptData }: { studentId: string, phasePromptData: PhasePromptMap | null }) {
+    const [currentlyLearningCards, setCurrentlyLearningCards] = useState<{
+        '1': StudentCard | undefined | null;
+        '2': StudentCard | undefined | null;
+        '3': StudentCard | undefined | null;
+    }>({
+        '1': undefined,
+        '2': undefined,
+        '3': undefined,
+    });
+
+    const [selectedPhase, setSelectedPhase] = useState<'1' | '2' | '3'>('1');
 
     useEffect(() => {
-        const fetchCurrentlyLearningCard = async () => {
+        const fetchCurrentlyLearningCards = async () => {
             try {
-                const newCurrentlyLearningCard = await getCurrentlyLearningCard(studentId as string, phase as string);
-                setCurrentlyLearningCard(newCurrentlyLearningCard);
+                phasePromptData?.forEach(async (value, key) => {
+                    const newCurrentlyLearningCard = await getCurrentlyLearningCard(studentId as string, key as string);
+                    setCurrentlyLearningCards(prev => ({ ...prev, [key]: newCurrentlyLearningCard.card }));
+                }
+                );
             } catch (error) {
                 console.error("Error fetching student card:", error);
+                setCurrentlyLearningCards({
+                    '1': null,
+                    '2': null,
+                    '3': null,
+                });
             }
-        }
-        fetchCurrentlyLearningCard();
-    }, [studentId, phase]);
+        };
+        fetchCurrentlyLearningCards();
+    }, [phasePromptData, studentId]);
 
-    // const getCardLearningTime = useMemo(() => {
-    //     phasePromptData?.forEach((phase) => {
-    //         phase.session.forEach((session) => {
-    //             session.trialPrompt.forEach((trial) => {
-    //                 if (trial.cardID === currentlyLearningCard?.cardID) {
-    //                     return trial.timestamp.toMillis();
-    //                 }
-    //             });
-    //         });
-    //     }
-    // }, []);
     return (
         <>
-            {currentlyLearningCard ?
+            {currentlyLearningCards ?
                 <Box sx={{ gridRow: '1/3', gridColumn: '4/5' }}>
                     <Card elevation={4}
                         sx={{
                             p: 1,
+                            boxSizing: 'border-box',
+                            height: '100%'
                         }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', my: 2, whiteSpace: 'nowrap', }}>
+                            <ButtonGroup variant="contained" aria-label="Basic button group">
+                                {Array.from(phasePromptData?.keys() || []).filter(phase => phase !== '4').map((element, index) => (
+                                    <Button key={element} onClick={() => setSelectedPhase(element as '1' | '2' | '3')}
+                                        sx={{ backgroundColor: phaseNewColors[index].bg, color: phaseNewColors[index].text, fontSize: '1em' }}>
+                                        {`Phase ${element}`}
+                                    </Button>
+                                ))}
+                            </ButtonGroup>
+                        </Box>
                         <Typography variant='h6' component='h6' sx={{ textAlign: 'center' }}>Currently Learning</Typography>
                         <Box sx={{ minHeight: '100' }}>
-                            <img src={currentlyLearningCard.imageUrl} alt={currentlyLearningCard.title}
+                            <img src={currentlyLearningCards[selectedPhase]?.imageUrl} alt={currentlyLearningCards[selectedPhase]?.title}
                                 style={{
                                     display: 'block',
                                     margin: '4px auto',
@@ -616,43 +792,43 @@ function CurrentlyLearningCard({ studentId, phase, phasePromptData }: { studentI
                                     // height: '10em',
                                     width: '10em',
                                 }} />
-                            <Typography variant='body1' mt={1} mx={2}>Title: {currentlyLearningCard.title}</Typography>
-                            <Typography variant='body1' mt={1} mx={2}>Category: {currentlyLearningCard.category}</Typography>
+                            <Typography variant='body1' mt={1} mx={2}>Title: {currentlyLearningCards[selectedPhase]?.title}</Typography>
+                            <Typography variant='body1' mt={1} mx={2}>Category: {currentlyLearningCards[selectedPhase]?.category}</Typography>
                         </Box>
                     </Card>
                 </Box>
-                :
-                <>
-                    <Skeleton variant="rectangular" height={'100%'} />
-                    <Box>
-                        <Skeleton />
-                        <Skeleton width="60%" />
-                    </Box>
-                </>
+                : currentlyLearningCards === undefined ?
+                    <>
+                        <Skeleton variant="rectangular" height={'100%'} />
+                        <Box>
+                            <Skeleton />
+                            <Skeleton width="60%" />
+                        </Box>
+                    </>
+                    : <></>
             }
         </>
     );
 }
 
-function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, studentCards: Map<string, StudentCard> }) {
-    const [promptFilter, setPromptFilter] = useState<{ cardID: string | undefined, startDate: Date | undefined, endDate: Date | undefined }>({
-        cardID: "",
+function ViewPrompts({ studentInfo, studentCards, phasePromptData }: { studentInfo: StudentInfo, studentCards: Map<string, StudentCard>, phasePromptData: PhasePromptMap | null }) {
+    const [promptFilter, setPromptFilter] = useState<{ phase: string, cardID: string, startDate: Date | undefined, endDate: Date | undefined }>({
+        phase: "All",
+        cardID: "All",
         startDate: undefined,
         endDate: undefined,
     });
     const [startDatecleared, setStartDateCleared] = useState<boolean>(false);
     const [endDatecleared, setEndDateCleared] = useState<boolean>(false);
-    const [studentPromptsData, setStudentPromptsData] = useState<SessionPromptMap | null>(null)
     const [studentPromptsCard, setStudentPromptsCard] = useState<string[]>([]);
 
 
-    const handlePromptFilterChange = ({ cardID, startDate, endDate }: { cardID: string, startDate: Date | undefined, endDate: Date | undefined }) => {
-        setPromptFilter({ cardID, startDate, endDate });
+    const handlePromptFilterChange = ({ phase, cardID, startDate, endDate }: { phase: string, cardID: string, startDate: Date | undefined, endDate: Date | undefined }) => {
+        setPromptFilter({ phase, cardID, startDate, endDate });
     };
 
     const handleStartDateChange = (value: dayjs.Dayjs | null) => {
         if (value) {
-            // Convert dayjs object to JavaScript Date
             const jsDate = value.toDate();
             // setPromptFilter({ ...promptFilter, startDate: jsDate });
             setPromptFilter(prevFilter => {
@@ -701,29 +877,34 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
     }, [endDatecleared]);
 
 
-    useEffect(() => {
-        const fetchStudentPromptData = async () => {
-            try {
-                const newStudentPrompts = await getStudentPromptData(studentInfo.userID as string, String(studentInfo.phase));
-                setStudentPromptsData(newStudentPrompts);
-                setStudentPromptsCard(getCardIdsFromStudentPromptData(newStudentPrompts));
-            } catch (error) {
-                console.error("Error fetching student prompts:", error);
-            }
-        };
-        fetchStudentPromptData();
-    }, [studentInfo.userID, studentInfo.phase]);
+    // useEffect(() => {
+    //     const fetchStudentPromptData = async () => {
+    //         try {
+    //             const newStudentPrompts = await getStudentPromptData(studentInfo.userID as string, String(studentInfo.phase));
+    //             setStudentPromptsData(newStudentPrompts);
+    //             setStudentPromptsCard(getCardIdsFromStudentPromptData(newStudentPrompts));
+    //         } catch (error) {
+    //             console.error("Error fetching student prompts:", error);
+    //         }
+    //     };
+    //     fetchStudentPromptData();
+    // }, [studentInfo.userID, studentInfo.phase]);
 
-    // const studentPromptsChart = useMemo(
-    //     () =>
-    //         filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate)
-    //     , [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
-
-    const [studentPromptsChart, setStudentPromptsChart] = useState<ChartData | null>(null);
     useEffect(() => {
-        const filteredStudentPromptsChart = filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate);
-        setStudentPromptsChart(filteredStudentPromptsChart);
-    }, [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
+        const newStudentCards = getCardIdsFromStudentPromptData(phasePromptData);
+        setStudentPromptsCard(newStudentCards);
+    }, [phasePromptData, promptFilter.phase]);
+
+    const studentPromptsChart = useMemo(
+        () =>
+            filterStudentChartData(phasePromptData, promptFilter.phase as string, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate)
+        , [phasePromptData, promptFilter.phase, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
+
+    // const [studentPromptsChart, setStudentPromptsChart] = useState<ChartData | null>(null);
+    // useEffect(() => {
+    //     const filteredStudentPromptsChart = filterStudentChartData(studentPromptsData, promptFilter.cardID as string, promptFilter.startDate, promptFilter.endDate);
+    //     setStudentPromptsChart(filteredStudentPromptsChart);
+    // }, [studentPromptsData, promptFilter.cardID, promptFilter.startDate, promptFilter.endDate]);
 
     const inputArrays =
     {
@@ -732,6 +913,7 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
         Gestural: studentPromptsChart?.gesturalArray || [],
         Modeling: studentPromptsChart?.modelingArray || [],
         Physical: studentPromptsChart?.physicalArray || [],
+        ...((promptFilter.phase === "1" || promptFilter.phase === "All") && { IndependentWrong: studentPromptsChart?.independentWrongArray || [] }),
     }
 
     function calculatePercentages(arrays: { [key: string]: number[] }): { label: string; value: number }[] {
@@ -765,15 +947,32 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
                     <Typography variant='h4' component='h4' >{`Prompts`}</Typography>
                     <Box sx={{ minWidth: 320, display: 'flex', gap: 1 }}>
                         <FormControl fullWidth>
-                            <InputLabel id="demo-simple-select-label">Card</InputLabel>
+                            <InputLabel id="demo-simple-select-label-phase">Phase</InputLabel>
                             <Select
-                                labelId="demo-simple-select-label"
-                                id="demo-simple-select"
+                                labelId="demo-simple-select-label-phase"
+                                id="demo-simple-select-phase"
+                                value={promptFilter.phase as string}
+                                label="Phase Filter"
+                                onChange={(event: SelectChangeEvent) => handlePromptFilterChange({ ...promptFilter, phase: event.target.value as string })}
+                            >
+                                <MenuItem value={"All"}>All</MenuItem>
+                                {Array.from(phasePromptData?.keys() || []).map((element) => (
+                                    <MenuItem key={element} value={element}>
+                                        {element}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel id="demo-simple-select-label-card">Card</InputLabel>
+                            <Select
+                                labelId="demo-simple-select-label-card"
+                                id="demo-simple-select-card"
                                 value={promptFilter.cardID as string}
-                                label="Prompt Filter"
+                                label="Card Filter"
                                 onChange={(event: SelectChangeEvent) => handlePromptFilterChange({ ...promptFilter, cardID: event.target.value as string })}
                             >
-                                <MenuItem value={""}>All</MenuItem>
+                                <MenuItem value={"All"}>All</MenuItem>
                                 {studentPromptsCard.map((cardID) => (
                                     <MenuItem key={cardID} value={cardID}>
                                         {studentCards.get(cardID)?.title}
@@ -796,11 +995,13 @@ function ViewPrompts({ studentInfo, studentCards }: { studentInfo: StudentInfo, 
                     colors={promptPalette}
                     xAxis={[{ scaleType: 'band', data: studentPromptsChart?.dateArray || [] }]}
                     series={[
-                        { data: studentPromptsChart?.independentArray || [], label: 'Independent', },
-                        { data: studentPromptsChart?.verbalArray || [], label: 'Verbal', },
-                        { data: studentPromptsChart?.gesturalArray || [], label: 'Gestural', },
-                        { data: studentPromptsChart?.modelingArray || [], label: 'Modeling', },
                         { data: studentPromptsChart?.physicalArray || [], label: 'Physical', },
+                        { data: studentPromptsChart?.modelingArray || [], label: 'Modeling', },
+                        { data: studentPromptsChart?.gesturalArray || [], label: 'Gestural', },
+                        { data: studentPromptsChart?.verbalArray || [], label: 'Verbal', },
+                        { data: studentPromptsChart?.independentArray || [], label: 'Independent', },
+                        ...((promptFilter.phase === "1" || promptFilter.phase === "All") ? [{ data: studentPromptsChart?.independentWrongArray || [], label: 'IndependentWrong', }] : []),
+
                     ]}
                     height={400}
                     grid={{ vertical: true, horizontal: true }}

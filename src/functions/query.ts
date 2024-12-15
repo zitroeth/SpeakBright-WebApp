@@ -498,6 +498,7 @@ export type ChartData = {
     modelingArray: number[];
     physicalArray: number[];
     verbalArray: number[];
+    independentWrongArray: number[];
 }
 
 // export async function getStudentPromptData(studentId: string, studentPhase: string, filterType: string): Promise<ChartData> {
@@ -670,147 +671,274 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
     return sessionPromptMap;
 }
 
-export function getCardIdsFromStudentPromptData(studentPromptData: SessionPromptMap | null) {
+export function getCardIdsFromStudentPromptData(phasePromptData: PhasePromptMap | null) {
     const studentCardIds: string[] = [];
-    if (!studentPromptData) return studentCardIds;
+    if (!phasePromptData) return studentCardIds;
 
-    studentPromptData.forEach(sessionPrompt => {
-        sessionPrompt.trialPrompt.forEach(trialPrompt => {
-            if (!studentCardIds.includes(trialPrompt.cardID))
-                studentCardIds.push(trialPrompt.cardID);
-        });
+    phasePromptData.forEach(phasePrompt => {
+        phasePrompt.session.forEach(sessionPrompt => {
+            sessionPrompt.trialPrompt.forEach(trialPrompt => {
+                if (!studentCardIds.includes(trialPrompt.cardID))
+                    studentCardIds.push(trialPrompt.cardID);
+            });
+        }
+        );
     });
     return studentCardIds;
 }
 
-export function filterStudentChartData(studentPromptData: SessionPromptMap | null, cardID: string, startDate?: Date, endDate?: Date) {
+function deepCopyPhasePromptMap(originalMap: PhasePromptMap): PhasePromptMap {
+    if (!originalMap) {
+        return new Map();
+    }
+
+    const newMap: PhasePromptMap = new Map();
+
+    originalMap.forEach((phaseData, phaseId) => {
+        const newSessionMap: SessionPromptMap = new Map();
+
+        phaseData.session.forEach((sessionData, sessionId) => {
+            const newTrialPromptMap: TrialPromptMap = new Map();
+
+            sessionData.trialPrompt.forEach((trialData, trialId) => {
+                newTrialPromptMap.set(trialId, { ...trialData }); // Deep copy trial data
+            });
+
+            newSessionMap.set(sessionId, {
+                ...sessionData,
+                trialPrompt: newTrialPromptMap
+            });
+        });
+
+        newMap.set(phaseId, {
+            ...phaseData,
+            session: newSessionMap,
+            entryTimestamps: phaseData.entryTimestamps?.map(ts => ts), // Copy timestamps
+            exitTimestamps: phaseData.exitTimestamps?.map(ts => ts)
+        });
+    });
+
+    return newMap;
+}
+
+export function filterStudentChartData(phasePromptData: PhasePromptMap | null, phase: string, cardID: string, startDate?: Date, endDate?: Date): ChartData {
     const chartData = {
         dateArray: [],
         gesturalArray: [],
         independentArray: [],
         modelingArray: [],
         physicalArray: [],
-        verbalArray: []
+        verbalArray: [],
+        independentWrongArray: [],
     } as ChartData;
-    console.log(`studentPromptData ${studentPromptData}`)
-    console.log(`cardId ${cardID}`)
-    console.log(`startDate ${startDate}`)
-    console.log(`endDate ${endDate}`)
 
-    const filteredStudentPromptData: SessionPromptMap = new Map(studentPromptData);
+    // console.log(`phasePromptData ${phasePromptData}`)
+    // console.log(`phase ${phase}`)
+    // console.log(`cardId ${cardID}`)
+    // console.log(`startDate ${startDate}`)
+    // console.log(`endDate ${endDate}`)
 
-    if (cardID) {
-        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
-            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
-                if (trialPrompt.cardID !== cardID) {
-                    sessionPrompt.trialPrompt.delete(trialPromptId);
+    const filteredPhasePromptData: PhasePromptMap = deepCopyPhasePromptMap(phasePromptData as PhasePromptMap);
+
+    if (phase !== "All") {
+        filteredPhasePromptData.forEach((phasePrompt, phaseId) => {
+            if (phaseId !== phase) {
+                filteredPhasePromptData.delete(phaseId);
+            }
+        });
+    }
+
+    if (cardID !== "All") {
+        filteredPhasePromptData.forEach((phase) => {
+            phase.session.forEach((sessionPrompt, sessionId) => {
+                sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                    if (trialPrompt.cardID !== cardID) {
+                        sessionPrompt.trialPrompt.delete(trialPromptId);
+                    }
+                });
+
+                if (sessionPrompt.trialPrompt.size === 0) {
+                    filteredPhasePromptData.delete(sessionId);
                 }
             });
-
-            if (sessionPrompt.trialPrompt.size === 0) {
-                filteredStudentPromptData.delete(sessionId);
-            }
         });
     }
 
     if (startDate) {
-        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
-            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
-                if (trialPrompt.timestamp.toDate().valueOf() < startDate.valueOf()) {
-                    sessionPrompt.trialPrompt.delete(trialPromptId);
+        filteredPhasePromptData.forEach((phasePrompt) => {
+            phasePrompt.session.forEach((sessionPrompt, sessionId) => {
+                sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                    if (trialPrompt.timestamp.toDate().valueOf() < startDate.valueOf()) {
+                        sessionPrompt.trialPrompt.delete(trialPromptId);
+                    }
+                });
+
+                if (sessionPrompt.trialPrompt.size === 0) {
+                    filteredPhasePromptData.delete(sessionId);
                 }
             });
-
-            if (sessionPrompt.trialPrompt.size === 0) {
-                filteredStudentPromptData.delete(sessionId);
-            }
         });
     }
 
     if (endDate) {
-        filteredStudentPromptData.forEach((sessionPrompt, sessionId) => {
-            sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
-                if (trialPrompt.timestamp.toDate().valueOf() > endDate.valueOf() + 86399999) {
-                    sessionPrompt.trialPrompt.delete(trialPromptId);
+        filteredPhasePromptData.forEach((phasePrompt) => {
+            phasePrompt.session.forEach((sessionPrompt, sessionId) => {
+                sessionPrompt.trialPrompt.forEach((trialPrompt, trialPromptId) => {
+                    if (trialPrompt.timestamp.toDate().valueOf() > endDate.valueOf() + 86399999) {
+                        sessionPrompt.trialPrompt.delete(trialPromptId);
+                    }
+                });
+
+                if (sessionPrompt.trialPrompt.size === 0) {
+                    filteredPhasePromptData.delete(sessionId);
                 }
             });
-
-            if (sessionPrompt.trialPrompt.size === 0) {
-                filteredStudentPromptData.delete(sessionId);
-            }
         });
     }
 
-    const dailyData: { [key: string]: { gestural: number; independent: number; modeling: number; physical: number; verbal: number } } = {};
+    // const dailyData: { [key: string]: { gestural: number; independent: number; modeling: number; physical: number; verbal: number, independentWrong: number } } = {};
 
-    filteredStudentPromptData.forEach((sessionPrompt) => {
-        const sessionDate = sessionPrompt.timestamp.toDate();
+    // filteredPhasePromptData.forEach((phasePrompt) => {
+    //     phasePrompt.session.forEach((sessionPrompt) => {
+    //         const sessionDate = sessionPrompt.timestamp.toDate();
 
-        sessionPrompt.trialPrompt.forEach((trialPrompt) => {
-            const { prompt, timestamp } = trialPrompt;
+    //         sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+    //             const { prompt, timestamp } = trialPrompt;
 
-            const formattedDate = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
-                // ? `${String(timestamp.toDate().getHours()).padStart(2, '0')}:${String(timestamp.toDate().getMinutes()).padStart(2, '0')}`
-                ? timestamp.toDate().toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
-                : sessionDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', });
-            // : sessionDate.toLocaleDateString();
+    //             const formattedDate = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
+    //                 // ? `${String(timestamp.toDate().getHours()).padStart(2, '0')}:${String(timestamp.toDate().getMinutes()).padStart(2, '0')}`
+    //                 ? timestamp.toDate().toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
+    //                 : sessionDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', });
+    //             // : sessionDate.toLocaleDateString();
 
-            if (!dailyData[formattedDate]) {
-                dailyData[formattedDate] = {
-                    gestural: 0,
-                    independent: 0,
-                    modeling: 0,
-                    physical: 0,
-                    verbal: 0,
-                };
-            }
+    //             if (!dailyData[formattedDate]) {
+    //                 dailyData[formattedDate] = {
+    //                     gestural: 0,
+    //                     independent: 0,
+    //                     modeling: 0,
+    //                     physical: 0,
+    //                     verbal: 0,
+    //                     independentWrong: 0,
+    //                 };
+    //             }
 
-            switch (prompt) {
-                case "Gestural":
-                    dailyData[formattedDate].gestural += 1;
-                    break;
-                case "Independent":
-                    dailyData[formattedDate].independent += 1;
-                    break;
-                case "Modeling":
-                    dailyData[formattedDate].modeling += 1;
-                    break;
-                case "Physical":
-                    dailyData[formattedDate].physical += 1;
-                    break;
-                case "Verbal":
-                    dailyData[formattedDate].verbal += 1;
-                    break;
-                default:
-                    break;
-            }
+    //             switch (prompt) {
+    //                 case "Gestural":
+    //                     dailyData[formattedDate].gestural += 1;
+    //                     break;
+    //                 case "Independent":
+    //                     dailyData[formattedDate].independent += 1;
+    //                     break;
+    //                 case "Modeling":
+    //                     dailyData[formattedDate].modeling += 1;
+    //                     break;
+    //                 case "Physical":
+    //                     dailyData[formattedDate].physical += 1;
+    //                     break;
+    //                 case "Verbal":
+    //                     dailyData[formattedDate].verbal += 1;
+    //                     break;
+    //                 case "IndependentWrong":
+    //                     dailyData[formattedDate].independentWrong += 1;
+    //                     break;
+    //                 default:
+    //                     break;
+    //             }
+    //         });
+    //     });
+
+    //     // Sort the dates in ascending order
+    //     const sortedDates = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
+    //         ? Object.keys(dailyData).sort((a, b) => new Date(`1970-01-01 ${a}`).valueOf() - new Date(`1970-01-01 ${b}`).valueOf())
+    //         : Object.keys(dailyData).sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf());
+
+    //     // Prepare arrays for the chart
+    //     sortedDates.forEach(date => {
+    //         chartData.dateArray.push(date);
+    //         chartData.gesturalArray.push(dailyData[date].gestural);
+    //         chartData.independentArray.push(dailyData[date].independent);
+    //         chartData.modelingArray.push(dailyData[date].modeling);
+    //         chartData.physicalArray.push(dailyData[date].physical);
+    //         chartData.verbalArray.push(dailyData[date].verbal);
+    //         chartData.independentWrongArray.push(dailyData[date].independentWrong);
+    //     });
+
+    // });
+    const dailyData: Map<string, { gestural: number; independent: number; modeling: number; physical: number; verbal: number; independentWrong: number }> = new Map();
+
+    filteredPhasePromptData.forEach((phase) => {
+        phase.session.forEach((sessionPrompt) => {
+            const sessionDate = sessionPrompt.timestamp.toDate().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+            sessionPrompt.trialPrompt.forEach((trialPrompt) => {
+                const { prompt, timestamp } = trialPrompt;
+                const sessionDate = sessionPrompt.timestamp.toDate();
+
+                const formattedDate = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
+                    ? timestamp.toDate().toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', second: 'numeric' })
+                    : sessionDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+                if (!dailyData.has(formattedDate)) {
+                    dailyData.set(formattedDate, {
+                        gestural: 0,
+                        independent: 0,
+                        modeling: 0,
+                        physical: 0,
+                        verbal: 0,
+                        independentWrong: 0,
+                    });
+                }
+
+                const dailyEntry = dailyData.get(formattedDate)!;
+
+                switch (prompt) {
+                    case "Gestural":
+                        dailyEntry.gestural += 1;
+                        break;
+                    case "Independent":
+                        dailyEntry.independent += 1;
+                        break;
+                    case "Modeling":
+                        dailyEntry.modeling += 1;
+                        break;
+                    case "Physical":
+                        dailyEntry.physical += 1;
+                        break;
+                    case "Verbal":
+                        dailyEntry.verbal += 1;
+                        break;
+                    case "IndependentWrong":
+                        dailyEntry.independentWrong += 1;
+                        break;
+                    default:
+                        break;
+                }
+            });
         });
     });
 
-    // Object.keys(dailyData).forEach(date => {
-    //     chartData.dateArray.push(date);
-    //     chartData.gesturalArray.push(dailyData[date].gestural);
-    //     chartData.independentArray.push(dailyData[date].independent);
-    //     chartData.modelingArray.push(dailyData[date].modeling);
-    //     chartData.physicalArray.push(dailyData[date].physical);
-    //     chartData.verbalArray.push(dailyData[date].verbal);
-    // });
-
     // Sort the dates in ascending order
-    const sortedDates = (startDate?.toISOString().split('T')[0] === endDate?.toISOString().split('T')[0] && startDate && endDate)
-        ? Object.keys(dailyData).sort((a, b) => new Date(`1970-01-01 ${a}`).valueOf() - new Date(`1970-01-01 ${b}`).valueOf())
-        : Object.keys(dailyData).sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf());
+    const sortedDates = Array.from(dailyData.keys()).sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf());
 
     // Prepare arrays for the chart
     sortedDates.forEach(date => {
+        const dailyEntry = dailyData.get(date)!;
         chartData.dateArray.push(date);
-        chartData.gesturalArray.push(dailyData[date].gestural);
-        chartData.independentArray.push(dailyData[date].independent);
-        chartData.modelingArray.push(dailyData[date].modeling);
-        chartData.physicalArray.push(dailyData[date].physical);
-        chartData.verbalArray.push(dailyData[date].verbal);
+        chartData.gesturalArray.push(dailyEntry.gestural);
+        chartData.independentArray.push(dailyEntry.independent);
+        chartData.modelingArray.push(dailyEntry.modeling);
+        chartData.physicalArray.push(dailyEntry.physical);
+        chartData.verbalArray.push(dailyEntry.verbal);
+        chartData.independentWrongArray.push(dailyEntry.independentWrong);
     });
-    console.log(`studentPromptsChart: ${JSON.stringify(chartData)}`);
+
+    console.log(`dateArray len(${chartData.dateArray.length}): ${chartData.dateArray}`);
+    console.log(`gesturalArray len(${chartData.gesturalArray.length}): ${chartData.gesturalArray}`);
+    console.log(`independentArray len(${chartData.independentArray.length}): ${chartData.independentArray}`);
+    console.log(`modelingArray len(${chartData.modelingArray.length}): ${chartData.modelingArray}`);
+    console.log(`physicalArray len(${chartData.physicalArray.length}): ${chartData.physicalArray}`);
+    console.log(`verbalArray len(${chartData.verbalArray.length}): ${chartData.verbalArray}`);
+    console.log(`independentWrongArray len(${chartData.independentWrongArray.length}): ${chartData.independentWrongArray}`);
     return chartData;
 }
 
@@ -1348,14 +1476,14 @@ export async function fetchExponentialSmoothingPrediction(data: DataPoint[], sta
     }
 }
 
-export async function getCurrentlyLearningCard(studentId: string, phase: string): Promise<StudentCard> {
+export async function getCurrentlyLearningCard(studentId: string, phase: string): Promise<{ phase: string, card: StudentCard }> {
     // Step 1: Get the latest session
     const sessionRef = collection(db, "activity_log", studentId, "phase", phase, "session");
     const sessionQuery = query(sessionRef, orderBy("timestamp", "desc"), limit(1));
     const sessionSnapshot = await getDocs(sessionQuery);
 
     if (sessionSnapshot.empty) {
-        throw new Error("No sessions found for the given student and phase.");
+        return { phase, card: {} as StudentCard };
     }
 
     const latestSession = sessionSnapshot.docs[0]; // Get the latest session document
@@ -1386,5 +1514,5 @@ export async function getCurrentlyLearningCard(studentId: string, phase: string)
     }
 
     // Step 5: Return the card data
-    return { ...cardSnapshot.data() } as StudentCard;
+    return { phase, card: cardSnapshot.data() as StudentCard };
 }

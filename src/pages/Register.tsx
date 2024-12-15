@@ -153,8 +153,6 @@ export default function Register() {
 
             await signOut(secondaryAuth);
             alert("User created successfully!");
-            const recentlyCreatedStudent = await getRecentlyCreatedStudent(users_data);
-            window.location.href = `/Home/${recentlyCreatedStudent}`;
         } catch (error) {
             alert(error);
         }
