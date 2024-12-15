@@ -27,6 +27,7 @@ import { db } from "../config/firebase";
 import StudentPrompt from "../components/StudentPrompt";
 import Favorites from "./Favorites";
 import AddFavoriteCardDialog from "../components/AddFavoriteCardDialog";
+import Ranking from "./Ranking";
 
 function a11yProps(index: number) {
     return {
@@ -184,13 +185,14 @@ export default function Student() {
                         sx={{
                             border: '1px solid #e8e8e8',
                         }}>
-                        <Tab label="Favorites" {...a11yProps(0)}
+
+                        <Tab label="Cards" {...a11yProps(1)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
                             }}
                         />
-                        <Tab label="Cards" {...a11yProps(1)}
+                        <Tab label="Ranking" {...a11yProps(0)}
                             sx={{
                                 // border: '1px solid #e8e8e8',
                                 textTransform: "capitalize",
@@ -210,9 +212,9 @@ export default function Student() {
                         (() => {
                             switch (tabValue) {
                                 case 0:
-                                    return <Favorites studentId={studentId as string} />
-                                case 1:
                                     return <Cards studentId={studentId as string} />
+                                case 1:
+                                    return <Ranking studentId={studentId as string} />
                                 case 2:
                                     return <Notes />
                                 default:

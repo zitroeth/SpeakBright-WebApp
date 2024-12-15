@@ -1,8 +1,12 @@
-import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc, getDocsFromServer, getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, query, where, deleteDoc, orderBy, updateDoc, limit, setDoc, getDocsFromServer, getCountFromServer, } from 'firebase/firestore';
 import { getDownloadURL, ref, StorageReference, uploadBytes } from "firebase/storage";
 import { storage, db, auth } from '../config/firebase';
 import { adminAuth } from '../config/admin';
 import { Timestamp } from 'firebase/firestore';
+import { MainCategory } from '../components/SortableCategory';
+import { radioClasses } from '@mui/material';
+import { Category } from '../pages/Ranking';
+import { CategoryCard } from '../components/SortableCards';
 
 export async function getStudents(guardianId: string) {
     const querySnapshot = await getDocs(collection(db, "user_guardian", guardianId, "students"));
@@ -99,7 +103,25 @@ export async function setCard(
             card_data.imageUrl = downloadURL;
         }
 
-        await addDoc(collection(db, "cards"), card_data);
+        const addedCardRef = await addDoc(collection(db, "cards"), card_data);
+
+        // Set userdoc to categoryRanking > $userId
+        const categoryRankingRef = doc(db, "categoryRanking", card_data.userId);
+        await setDoc(categoryRankingRef, { studentID: card_data.userId }, { merge: true });
+
+        // Count number of doc in a category subcollection
+        const categoryCountColl = collection(db, "categoryRanking", card_data.userId, card_data.category);
+        const categoryCountsnapshot = await getCountFromServer(categoryCountColl);
+
+        // Set carddoc to categoryRanking > $userId > $category > $cardId
+        const categoryRankingCardRef = doc(db, "categoryRanking", card_data.userId, card_data.category, addedCardRef.id);
+        await setDoc(categoryRankingCardRef, {
+            cardID: addedCardRef.id,
+            cardTitle: card_data.title,
+            imageUrl: card_data.imageUrl,
+            rank: categoryCountsnapshot.data().count + 1
+        });
+
     } catch (error) {
         alert(error);
     }
@@ -1515,4 +1537,184 @@ export async function getCurrentlyLearningCard(studentId: string, phase: string)
 
     // Step 5: Return the card data
     return { phase, card: cardSnapshot.data() as StudentCard };
+}
+
+export async function setDefaultMainCategoryRanking(studentId: string) {
+    try {
+        await setDoc(doc(db, "main_category_ranking", studentId), {
+            categories: [
+                {
+                    category: "Food",
+                    rank: 2
+                },
+                {
+                    category: "Toys",
+                    rank: 3
+                },
+                {
+                    category: "Emotions",
+                    rank: 4
+                },
+                {
+                    category: "School",
+                    rank: 5
+                },
+                {
+                    category: "Activities",
+                    rank: 6
+                },
+                {
+                    category: "Chores",
+                    rank: 7
+                },
+                {
+                    category: "Clothing",
+                    rank: 8
+                },
+                {
+                    category: "People",
+                    rank: 9
+                },
+                {
+                    category: "Places",
+                    rank: 10
+                }
+            ]
+        });
+        return Promise.resolve(`Default Main Category Ranking set successfully`);
+    } catch (error) {
+        return Promise.reject(error);
+    }
+}
+
+export async function getMainCategoryRanking(studentId: string) {
+    let categories: MainCategory[] = [
+        { category: "Favorites", rank: 1 },
+        { category: "Food", rank: 2 },
+        { category: "Toys", rank: 3 },
+        { category: "Emotions", rank: 4 },
+        { category: "School", rank: 5 },
+        { category: "Activities", rank: 6 },
+        { category: "Chores", rank: 7 },
+        { category: "Clothing", rank: 8 },
+        { category: "People", rank: 9 },
+        { category: "Places", rank: 10 }
+    ];
+    const docRef = doc(db, "main_category_ranking", studentId);
+    const docSnapshot = await getDoc(docRef);
+    if (!docSnapshot.exists()) {
+        await setDefaultMainCategoryRanking(studentId);
+        return categories as MainCategory[];
+    }
+    categories = docSnapshot.get('categories') as MainCategory[];
+    categories.unshift({ category: "Favorites", rank: 1 });
+    return categories;
+}
+
+export async function setMainCategoryRanking(studentId: string, mainCategoryRanking: MainCategory[]) {
+    const mainCategoryRankingRef = doc(db, 'main_category_ranking', studentId);
+    try {
+        await updateDoc(mainCategoryRankingRef, {
+            categories: mainCategoryRanking
+        });
+        return Promise.resolve(`Main Category Ranking successfully`);
+    } catch (error) {
+        return Promise.reject(error);
+    }
+}
+
+// export async function getCardCategoryRanking(studentId: string) {
+//     const categories: Category[] = [
+//         "Favorites",
+//         "Food",
+//         "Toys",
+//         "Emotions",
+//         "School",
+//         "Activities",
+//         "Chores",
+//         "Clothing",
+//         "People",
+//         "Places",
+//     ];
+//     const categoryRankingArray = new Array<{ category: Category, categoryCard: CategoryCard[] }>();
+
+//     categories.forEach(async (category) => {
+//         const categoryRankingSnapshot = await getDocs(collection(db, "categoryRanking", studentId, category));
+//         const categoryCardArray: CategoryCard[] = []
+//         categoryRankingSnapshot.forEach(doc => {
+//             console.log(`category: ${category}, doc.data(): ${JSON.stringify(doc.data())}`);
+//             categoryCardArray.push(doc.data() as CategoryCard);
+//         });
+//         categoryRankingArray.push({
+//             category: category as Category,
+//             categoryCard: categoryCardArray as CategoryCard[]
+//         });
+//     });
+//     console.log(`return categoryRankingArray: ${JSON.stringify(categoryRankingArray)}`);
+//     return categoryRankingArray as { category: Category, categoryCard: CategoryCard[] }[];
+// }
+export async function getCardCategoryRanking(studentId: string): Promise<{ category: Category, categoryCard: CategoryCard[] }[]> {
+    const categories: Category[] = [
+        "Favorites",
+        "Food",
+        "Toys",
+        "Emotions",
+        "School",
+        "Activities",
+        "Chores",
+        "Clothing",
+        "People",
+        "Places",
+    ];
+
+    const categoryRankingArray = await Promise.all(categories.map(async (category) => {
+        const categoryRankingQuery = query(collection(db, "categoryRanking", studentId, category), orderBy("rank"));
+        const categoryRankingSnapshot = await getDocs(categoryRankingQuery);
+        const categoryCardArray: CategoryCard[] = [];
+        categoryRankingSnapshot.forEach(doc => {
+            categoryCardArray.push(doc.data() as CategoryCard);
+        });
+        return {
+            category: category as Category,
+            categoryCard: categoryCardArray as CategoryCard[]
+        };
+    }));
+
+    const favoriteRankingQuery = query(collection(db, "favorites", studentId, "cards"), orderBy("rank"));
+    const favoriteRankingSnapshot = await getDocs(favoriteRankingQuery);
+    const favoriteCardArray: CategoryCard[] = [];
+    favoriteRankingSnapshot.forEach(doc => {
+        favoriteCardArray.push({
+            cardID: doc.id,
+            cardTitle: doc.get("title") as string,
+            imageUrl: doc.get("imageUrl") as string,
+            rank: doc.get("rank") as number
+        } as CategoryCard);
+    });
+    categoryRankingArray.unshift({
+        category: "Favorites",
+        categoryCard: favoriteCardArray as CategoryCard[]
+    });
+    return categoryRankingArray as { category: Category, categoryCard: CategoryCard[] }[];
+}
+
+export async function setCardCategoryRanking(studentId: string, cardId: string, category: string, rank: number) {
+    if (category !== "Favorites") {
+        const cardCategoryRankingRef = doc(db, 'categoryRanking', studentId, category, cardId);
+        try {
+            await updateDoc(cardCategoryRankingRef, {
+                rank: rank
+            });
+            return Promise.resolve(`Card Category Ranking updated successfully`);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    } else if (category === "Favorites") {
+        try {
+            await setStudentFavoriteCardRank(studentId, cardId, rank);
+            return Promise.resolve(`Card Category Ranking updated successfully`);
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    }
 }
