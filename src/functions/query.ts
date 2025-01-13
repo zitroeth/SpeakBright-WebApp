@@ -647,9 +647,15 @@ export type ChartData = {
 //     }
 // }
 
-export type PhasePromptMap = Map<string, { entryTimestamps?: Timestamp[], exitTimestamps?: Timestamp[], session: SessionPromptMap }>;
-export type SessionPromptMap = Map<string, { timestamp: Timestamp, independentCount: number, totalTaps: number, trialPrompt: TrialPromptMap }>;
-export type TrialPromptMap = Map<string, { cardID: string, prompt: string, timestamp: Timestamp }>;
+export type PhasePromptMap = Map<string, {
+    entryTimestamps?: Timestamp[], exitTimestamps?: Timestamp[], session: SessionPromptMap
+}>;
+export type SessionPromptMap = Map<string, {
+    timestamp: Timestamp, independentCount: number, totalTaps: number, trialPrompt: TrialPromptMap
+}>;
+export type TrialPromptMap = Map<string, {
+    cardID: string, prompt: string, timestamp: Timestamp
+}>;
 
 export async function getPhasesPromptData(studentID: string): Promise<PhasePromptMap> {
     const phasePromptMap: PhasePromptMap = new Map();
@@ -687,7 +693,13 @@ export async function getStudentPromptData(studentId: string, studentPhase: stri
             });
         }
 
-        sessionPromptMap.set(sessionDoc.id, { timestamp: sessionDoc.data().timestamp as Timestamp, independentCount: sessionDoc.data().independentCount as number, totalTaps: sessionDoc.data().totalTaps as number, trialPrompt: trialPromptMap });
+        sessionPromptMap.set(sessionDoc.id,
+            {
+                timestamp: sessionDoc.data().timestamp as Timestamp,
+                independentCount: sessionDoc.data().independentCount as number,
+                totalTaps: sessionDoc.data().totalTaps as number,
+                trialPrompt: trialPromptMap
+            });
 
     }
     return sessionPromptMap;
@@ -1472,7 +1484,6 @@ export async function fetchExponentialSmoothingPrediction(data: DataPoint[], sta
 
     try {
         const requestBody: PredictionRequest = { data, start, end };
-
         // Send POST request to the API using fetch
         const response = await fetch(url, {
             method: "POST",
@@ -1482,15 +1493,10 @@ export async function fetchExponentialSmoothingPrediction(data: DataPoint[], sta
             body: JSON.stringify(requestBody),
         });
 
-        // Check if the response is OK
-        if (!response.ok) {
+        if (!response.ok)
             throw new Error(`Error: ${response.statusText}`);
-        }
 
-        // Parse the response JSON
         const responseData: PredictionResponse = await response.json();
-
-        // Return the predicted sum
         return responseData.predictedSum;
     } catch (error) {
         console.error("Error communicating with the API:", error);

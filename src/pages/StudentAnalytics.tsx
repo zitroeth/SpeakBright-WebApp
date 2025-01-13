@@ -247,9 +247,6 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                             if (timestamp.toMillis() < existingInstance.firstInstance.toMillis()) {
                                 existingInstance.firstInstance = timestamp;
                             }
-                            if (timestamp.toMillis() > existingInstance.completion.toMillis()) {
-                                existingInstance.completion = timestamp;
-                            }
                         } else {
                             independentCardsTimestamp.set(cardID, { firstInstance: timestamp, completion: completionTimestamp });
                         }
@@ -297,9 +294,6 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                         if (existingInstance) {
                             if (timestamp.toMillis() < existingInstance.firstInstance.toMillis()) {
                                 existingInstance.firstInstance = timestamp;
-                            }
-                            if (timestamp.toMillis() > existingInstance.completion.toMillis()) {
-                                existingInstance.completion = timestamp;
                             }
                         } else {
                             independentCardsTimestamp.set(cardID, { firstInstance: timestamp, completion: completionTimestamp });
@@ -369,7 +363,7 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                         : 0}
                                     fill={phaseNewColors[parseInt(phase.label) - 1].bg} />
                                 <Typography variant='body1' mt={1} mx={2}>
-                                    Estimated time to finish: <strong>
+                                    Estimated time to finish: <strong>~
                                         {(() => {
                                             const prediction = phasePredictionsSES.find(prediction => prediction.phase === phase.label);
                                             if (prediction && prediction.estimatedSum > 0) {
@@ -396,8 +390,8 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                 </Box>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Cards: <strong>{(phaseCards.find((element) => element.phase === phase.label)?.cards.length || 0)}</strong></Typography>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Proficient Cards: <strong>{(independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0)}</strong></Typography>
-                                <Typography variant='body1' mt={1} mx={2}>Time Spent: <strong>{convertMillisecondsToReadableString(phasesDuration.find((element) => element.label === phase.label)?.value as number)}</strong></Typography>
-                                <Typography variant='body1' mt={1} mx={2}>Avg. Time for Card Proficiency: <strong>{convertMillisecondsToReadableString(averagePhaseCardIndependenceTime.find((element) => element.phase === phase.label)?.averageCardTime as number)}</strong></Typography>
+                                <Typography variant='body1' mt={1} mx={2}>Time Spent in Phase: <strong>{convertMillisecondsToReadableString(phasesDuration.find((element) => element.label === phase.label)?.value as number)}</strong></Typography>
+                                <Typography variant='body1' mt={1} mx={2}>Avg. Time for Card Proficiency: <strong>{convertMillisecondsToReadableString(averagePhaseCardIndependenceTime.find((element) => element.phase === phase.label)?.averageCardTime as number) || 'Needs more sessions'}</strong></Typography>
                             </Card>
                         </>
                     ))}
