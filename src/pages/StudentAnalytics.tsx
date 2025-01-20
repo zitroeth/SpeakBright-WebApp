@@ -339,14 +339,17 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
         fetchPhasePredictionsSES();
     }, [completionDataArray, phasesDuration, phaseCards, independentPhaseCards]);
 
-    useEffect(() => {
-        console.log(JSON.stringify(phasePredictionsSES));
-    }, [phasePredictionsSES]);
+
+    const requiredPhases = ['1', '2', '3'];
+    const missingPhases = requiredPhases.filter(phase => !phasesDuration.some(p => p.label === phase));
+    const completePhasesDuration = phasesDuration.concat(missingPhases.map(phase => ({ label: phase, value: 0 })));
+
+
     return (
         <>
             {phasesPromptData && phasePredictionsSES ?
                 <>
-                    {phasesDuration.filter(phase => phase.label !== '4').map((phase) => (
+                    {completePhasesDuration.filter(phase => phase.label !== '4').map((phase) => (
                         <>
                             <Card elevation={4} key={`phase-progress-main-${phase.label}`}
                                 sx={{
@@ -390,7 +393,7 @@ function PhaseProgress({ phasesPromptData, studentCards }: PhaseProgressProps) {
                                 </Box>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Cards: <strong>{(phaseCards.find((element) => element.phase === phase.label)?.cards.length || 0)}</strong></Typography>
                                 <Typography variant='body1' mt={1} mx={2}>No. of Proficient Cards: <strong>{(independentPhaseCards.find((element) => element.phase === phase.label)?.independentCards.length || 0)}</strong></Typography>
-                                <Typography variant='body1' mt={1} mx={2}>Time Spent in Phase: <strong>{convertMillisecondsToReadableString(phasesDuration.find((element) => element.label === phase.label)?.value as number)}</strong></Typography>
+                                <Typography variant='body1' mt={1} mx={2}>Time Spent in Phase: <strong>{convertMillisecondsToReadableString(phasesDuration.find((element) => element.label === phase.label)?.value as number) || '0'}</strong></Typography>
                                 <Typography variant='body1' mt={1} mx={2}>Avg. Time for Card Proficiency: <strong>{convertMillisecondsToReadableString(averagePhaseCardIndependenceTime.find((element) => element.phase === phase.label)?.averageCardTime as number) || 'Needs more sessions'}</strong></Typography>
                             </Card>
                         </>
