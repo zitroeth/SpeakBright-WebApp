@@ -1,15 +1,17 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import mainTheme from "../themes/Theme";
-import { useEffect, useState } from "react";
-import { getCardCategories, getOtherStudentCards, getStudentCards, removeCard, removeStudent, setCard, setImage } from "../functions/query";
+import { useEffect, useMemo, useState } from "react";
+import { getCardCategories, getFavoriteCardIds, getOtherStudentCards, getStudentCards, removeCard, setCard, setCardFavorite, setImage } from "../functions/query";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import { Backdrop, Button, Card, CardActions, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField } from "@mui/material";
+import { Backdrop, Button, Card, CardContent, CardMedia, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Fade, FormControl, IconButton, InputLabel, MenuItem, Modal, Select, TextField, Tooltip } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { ThemeProvider } from "@emotion/react";
 import addImageIcon from '../assets/add_image_icon 1.png';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
 // const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
 const addCardModalStyle = {
@@ -17,8 +19,8 @@ const addCardModalStyle = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    height: '70vh',
-    width: '70vw',
+    height: '75vh',
+    width: '75vw',
     bgcolor: 'background.paper',
     // border: '2px solid #000',
     borderRadius: '8px',
@@ -28,7 +30,6 @@ const addCardModalStyle = {
 
 interface CardsProps {
     studentId: string;
-    guardianId: string;
 }
 
 export default function Cards(props: CardsProps) {
@@ -44,10 +45,17 @@ export default function Cards(props: CardsProps) {
     const [inputCategory, setInputCategory] = useState("");
     const [inputImage, setInputImage] = useState<Blob | null>(null);
     const [inputCardUrl, setInputCardUrl] = useState("");
+
     const [doneButton, setDoneButton] = useState(false);
     const [allCards, setAllCards] = useState<React.ReactNode[]>([]); // All Cards of current user
     const [cards, setCards] = useState<React.ReactNode[]>([]); // Filtered React Element Cards
     const [otherCards, setOtherCards] = useState<React.ReactNode[]>([]); // Cards that current user doesnt contain
+    // const [isSettingEmotion, setIsSettingEmotion] = useState(false);
+    const [filterOtherCards, setFilterOtherCards] = useState({
+        textFilter: '',
+        categoryFilter: 'All',
+    });
+    const [favoriteCardIds, setFavoriteCardIds] = useState<string[]>([]);
 
 
     const handleCategoryChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -68,7 +76,11 @@ export default function Cards(props: CardsProps) {
                 const cardRef = await setImage(uniqueFileName, inputImage as Blob);
                 const card_data = {
                     category: inputCategory,
-                    imageUrl: "",
+                    imageUrl: undefined,
+                    phase1_independence: false,
+                    phase2_independence: false,
+                    phase3_independence: false,
+                    tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
                 }
@@ -78,6 +90,10 @@ export default function Cards(props: CardsProps) {
                 const card_data = {
                     category: inputCategory,
                     imageUrl: inputCardUrl,
+                    phase1_independence: false,
+                    phase2_independence: false,
+                    phase3_independence: false,
+                    tapCount: 0,
                     title: inputCardName,
                     userId: props.studentId,
                 }
@@ -113,19 +129,58 @@ export default function Cards(props: CardsProps) {
             if (studentCards) {
                 for (const [key, value] of studentCards) {
                     cardsArray.push(
-                        <Card key={key} data-category-type={value.category} sx={{ maxHeight: '25vh', minWidth: '25vh', marginBottom: '20px' }}>
+                        <Card key={key} data-category-type={value.category} data-id={key} sx={{ minHeight: '25vh', maxHeight: '25vh', m: '5%' }}>
                             <CardMedia
                                 sx={{ height: '15vh', width: '100%', objectFit: 'contain', }}
                                 image={value.imageUrl}
                                 title={value.title}
                             />
                             <CardContent sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography gutterBottom variant="h5" component="h5">
+                                <Typography gutterBottom variant="h5" component="h5" sx={{
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    textWrap: 'nowrap'
+                                }}>
                                     {value.title}
                                 </Typography>
-                                <IconButton aria-label="delete" size="medium" color='error' sx={{ pt: "0" }} onClick={() => setDeleteCardModal({ isActive: true, cardId: key, cardName: value.title })}>
-                                    <DeleteIcon fontSize="inherit" />
-                                </IconButton>
+
+                                <ThemeProvider theme={mainTheme}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start' }}>
+                                        <IconButton aria-label="favorite" size="medium" color="primary" sx={{ pt: "0" }}
+                                            onClick={() => {
+                                                if (favoriteCardIds.length <= 3 && favoriteCardIds.includes(key)) {
+                                                    alert("You must have 3 favorite cards");
+                                                }
+                                                else if (favoriteCardIds.length >= 10 && !favoriteCardIds.includes(key)) {
+                                                    alert("You can only have 10 favorite cards");
+                                                } else {
+                                                    setCardFavorite(props.studentId, { cardID: key, category: value.category, imageUrl: value.imageUrl, title: value.title }, !favoriteCardIds.includes(key))
+                                                        .then(() => {
+                                                            setFavoriteCardIds(favoriteCardIds.includes(key) ? favoriteCardIds.filter(id => id !== key) : [...favoriteCardIds, key]);
+                                                        })
+                                                        .catch(error => {
+                                                            console.error("Error updating favorite status: ", error);
+                                                        });
+                                                }
+                                            }}>
+                                            {favoriteCardIds.includes(key) ?
+                                                <Tooltip title="Remove from favorites">
+                                                    <FavoriteIcon fontSize="inherit" />
+                                                </Tooltip>
+                                                :
+                                                <Tooltip title="Add to favorites">
+                                                    <FavoriteBorderIcon fontSize="inherit" />
+                                                </Tooltip>
+                                            }
+                                        </IconButton>
+                                        <Tooltip title="Delete">
+                                            <IconButton aria-label="delete" size="medium" color='error' sx={{ pt: "0" }} onClick={() => setDeleteCardModal({ isActive: true, cardId: key, cardName: value.title })}>
+                                                <DeleteIcon fontSize="inherit" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
+
+                                </ThemeProvider>
                             </CardContent>
                         </Card >
                     );
@@ -142,7 +197,8 @@ export default function Cards(props: CardsProps) {
             if (studentOtherCards) {
                 for (const [key, value] of studentOtherCards) {
                     otherCardsArray.push(
-                        <Card key={key} data-category-type={value.category} onClick={() => { setInputImage(null); setInputCardUrl(value.imageUrl); setInputCardName(value.title); setInputCategory(value.category); }} sx={{ minHeight: '20vh', minWidth: '100%', m: '5%' }}>
+                        <Card key={key} data-category-type={value.category} onClick={() => { setInputImage(null); setInputCardUrl(value.imageUrl); setInputCardName(value.title); setInputCategory(value.category); }}
+                            sx={{ minHeight: '25vh', minWidth: '95%', maxHeight: '25vh', m: '5%' }}>
                             <CardMedia
                                 sx={{ height: '60%', objectFit: 'contain' }}
                                 image={`${value.imageUrl}?height=100`}
@@ -163,7 +219,7 @@ export default function Cards(props: CardsProps) {
         fetchCategories();
         fetchCards();
         fetchOtherCards();
-    }, [props.studentId,]);
+    }, [props.studentId, favoriteCardIds]);
 
     useEffect(() => {
         if (category === "All") {
@@ -183,6 +239,29 @@ export default function Cards(props: CardsProps) {
         }
     }, [inputCardName, inputCategory, inputImage, inputCardUrl]);
 
+    const filteredOtherCards = useMemo(() => {
+        const newOtherCards = otherCards.filter(card => {
+            const cardTitle = card.props.children[0].props.title.toLowerCase();
+            const categoryType = card.props['data-category-type'];
+
+            const textMatch = !filterOtherCards.textFilter.trim().toLowerCase() || cardTitle.includes(filterOtherCards.textFilter.trim().toLowerCase());
+            const categoryMatch = filterOtherCards.categoryFilter === 'All' || categoryType === filterOtherCards.categoryFilter;
+
+            return textMatch && categoryMatch;
+        });
+        return newOtherCards;
+    }, [otherCards, filterOtherCards])
+
+
+    useEffect(() => {
+        const fetchFavoriteCardIds = async () => {
+            const favoriteCardsArray = await getFavoriteCardIds(props.studentId);
+            console.log(favoriteCardsArray)
+            setFavoriteCardIds(favoriteCardsArray);
+        }
+
+        fetchFavoriteCardIds();
+    }, [props.studentId]);
 
     return (
         <Box display='flex' flexDirection='column' justifyContent='flex-start' width={'100%'} height={'100%'} flex={1}
@@ -204,7 +283,7 @@ export default function Cards(props: CardsProps) {
             >
                 <Fade in={addCardModal}>
                     <Box sx={addCardModalStyle}>
-                        <Box display='flex' flexDirection='row' justifyContent='space-between'>
+                        <Box display='flex' flexDirection='row' justifyContent='space-between' height='fit-content'>
                             <Typography id="transition-modal-title" variant="h5" component="h2" color={mainTheme.palette.primary.main}>
                                 Add Cards
                             </Typography>
@@ -212,70 +291,90 @@ export default function Cards(props: CardsProps) {
                                 <CloseIcon fontSize="large" sx={{ color: mainTheme.palette.secondary.main }} />
                             </IconButton>
                         </Box>
-                        <Box display='flex' flexDirection='row' justifyContent='space-between' mt={'4%'} width={'100%'} height={'100%'}>
-                            {/* <Box display='flex' flexDirection='row' flexWrap='wrap' justifyContent='space-around' border={`1px solid ${mainTheme.palette.primary.main}`}
-                                sx={{
-                                    overflowX: 'auto', overflowY: 'auto',
-                                    mt: '1%', p: '1%',
-                                    width: '48%', height: '80%',
-                                }} >
-                                
-                                <Typography id="transition-modal-title" variant="h6" component="h2" color={mainTheme.palette.primary.main}
-                                    sx={{
-                                        m: '3%'
-                                    }}>
-                                    Other Cards
-                                </Typography>
-                                {otherCards}
-
-                            </Box> */}
+                        <Box display='flex' flexDirection='row' justifyContent='space-between' mt={'1%'} width={'100%'} height={'100%'}>
                             <Box
                                 display="flex"
                                 flexDirection="row"
                                 flexWrap="wrap"
-                                justifyContent="space-around"
+                                justifyContent="flex-start"
                                 border={`1px solid ${mainTheme.palette.primary.main}`}
                                 sx={{
-                                    position: 'relative', // Make the box relative for absolute positioning inside
-                                    overflowX: 'auto',
-                                    overflowY: 'auto',
-                                    mt: '1%',
                                     p: '1%',
                                     width: '48%',
-                                    height: '80%',
+                                    height: '85%',
+                                    overflowY: 'hidden',
                                 }}
                             >
-                                <Typography
-                                    id="transition-modal-title"
-                                    variant="h6"
-                                    component="h2"
-                                    color={mainTheme.palette.primary.main}
+                                <Box
+                                    display="flex"
+                                    flexDirection="row"
+                                    justifyContent="space-between"
                                     sx={{
-                                        position: 'absolute',
-                                        top: '0',
-                                        left: '0',
-                                        m: '3%', // Margin for positioning away from the edges
+                                        mt: '1%',
+                                        p: '1%',
+                                        width: '100%',
+                                        height: 'fit-content'
                                     }}
                                 >
-                                    Other Cards
-                                </Typography>
+                                    <Typography
+                                        id="transition-modal-title"
+                                        variant="h6"
+                                        component="h2"
+                                        color={mainTheme.palette.primary.main}
+                                        sx={{
+                                        }}
+                                    >
+                                        Other Cards
+                                    </Typography>
+                                    <Box
+                                        display="flex"
+                                        flexDirection="row"
+                                        justifyContent="flex-end"
+                                        sx={{
+                                            p: '1%',
+                                            width: '80%',
+                                        }}
+                                    >
+                                        <ThemeProvider theme={mainTheme}>
+                                            <TextField value={filterOtherCards.textFilter} label="Search cards..." id="other-card-text-filter" sx={{ width: '48%' }} onChange={(e) => setFilterOtherCards({ ...filterOtherCards, textFilter: e.target.value as string })} />
+                                            <FormControl sx={{ ml: '5%', minWidth: '15%' }}>
+                                                <InputLabel id="other-card-category-filter-simple-select-label">Category</InputLabel>
+                                                <Select
+                                                    labelId="other-card-category-filter-simple-select-label"
+                                                    id="other-card-category-filter-simple-select"
+                                                    value={filterOtherCards.categoryFilter}
+                                                    label="Other Card Category Filter"
+                                                    onChange={(e) => setFilterOtherCards({ ...filterOtherCards, categoryFilter: e.target.value as string })}
+                                                    autoWidth
+                                                >
+                                                    {categories && Array.from(categories.entries()).map(([key, value]) => (
+                                                        <MenuItem key={`${key}-filter`} value={value.category}>
+                                                            {value.category}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </ThemeProvider>
+                                    </Box>
+                                </Box>
 
                                 <Box
                                     display="grid"
                                     gridTemplateColumns="repeat(auto-fill, minmax(30%, 1fr))"
-                                    gap="5%"
                                     sx={{
-                                        mt: '10%', // To push the grid below the Typography
+                                        height: '80%',
                                         width: '100%',
-                                        height: 'auto',
-                                        overflowX: 'clip',
+                                        overflowX: 'auto',
+                                        overflowY: 'auto',
+                                        rowGap: '1%',
+                                        columnGap: '5%',
                                     }}
                                 >
-                                    {otherCards}
+                                    {filteredOtherCards}
                                 </Box>
                             </Box>
 
-                            <Box display='flex' flexDirection='column' justifyContent='space-between' width={'48%'} height={'80%'}>
+                            <Box display='flex' flexDirection='column' justifyContent='space-between' width={'48%'} height={'85%'}>
                                 <Box display='flex' flexDirection='row' justifyContent='space-between' width={'100%'}>
                                     <ThemeProvider theme={mainTheme}>
                                         <TextField value={inputCardName} label="Card Name" id="card-name-input" sx={{ width: '48%' }} onChange={(e) => setInputCardName(e.target.value as string)} />
@@ -302,7 +401,7 @@ export default function Cards(props: CardsProps) {
 
                                 <Box
                                     display='flex'
-                                    border={`4px dashed ${inputImage ? mainTheme.palette.primary.main : `#ababab`}`}
+                                    border={`4px dashed ${!doneButton ? mainTheme.palette.primary.main : `#ababab`}`}
                                     borderRadius={8}
                                     width={'100%'}
                                     height={'100%'}
@@ -386,15 +485,6 @@ export default function Cards(props: CardsProps) {
 
 
 
-            <Typography variant="h6" component="div"
-                sx={{
-                    textTransform: "capitalize",
-                    color: mainTheme.palette.primary.main,
-                }}
-            >
-                {`Current Cards`}
-            </Typography>
-
             <Box display='flex' flexDirection='row' justifyContent='space-between'
                 sx={{
                     width: '100%',
@@ -403,14 +493,16 @@ export default function Cards(props: CardsProps) {
                 <Tabs
                     value={category}
                     onChange={handleCategoryChange}
-                    variant="scrollable"
+                    // variant="scrollable"
                     scrollButtons
                     allowScrollButtonsMobile
                     aria-label="scrollable force tabs example"
                     sx={{
                         '& .MuiTabs-indicator': {
-                            // backgroundColor: colors[category % colors.length], // Change indicator color based on the active tab
+                            // backgroundColor: colors[categories ? Array.from(categories.values()).findIndex(cat => cat.category === category) : 0] || '#790377',
                         },
+                        border: `1px solid ${mainTheme.palette.secondary.main}`,
+                        borderRadius: '10px',
                     }}
                 >
                     {categories && Array.from(categories.entries()).map(([key, value], index) => (
@@ -427,16 +519,29 @@ export default function Cards(props: CardsProps) {
                 <Button disabled={otherCards.length === 0} variant="contained" onClick={() => setAddCardModal(true)} sx={{ textTransform: 'capitalize' }}>Add Card +</Button>
             </Box>
 
-            <Box flex={1} display='flex' flexDirection='row' flexWrap='wrap' justifyContent='space-around'
+            {/* <Box flex={1} display='flex' flexDirection='row' flexWrap='wrap' justifyContent='space-around'
                 sx={{
                     overflowX: 'auto', overflowY: 'auto',
                     mt: '1%', p: '1%',
-
                 }}
             >
-                {cards}     {/* {Make this part Scrollable} */}
+                {cards}
+            </Box> */}
+            <Box
+                display="grid"
+                gridTemplateColumns="repeat(auto-fill, minmax(18%, 1fr))"
+                sx={{
+                    mt: '1%',
+                    height: '100%',
+                    width: '100%',
+                    overflowX: 'hidden',
+                    overflowY: 'auto',
+                    rowGap: '5%',
+                    columnGap: '1%',
+                }}
+            >
+                {cards}
             </Box>
-
         </Box >
     );
 }

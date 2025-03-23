@@ -5,15 +5,13 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import { IconButton, ThemeProvider } from '@mui/material';
 import { mainTheme, gradientTheme } from '../themes/Theme';
-import speakBrightLogo from '../assets/SpeakBright 1.png';
+import speakBrightLogo from '../assets/SpeakBright 1 CROP.png';
 import { signOut } from 'firebase/auth';
 import useAuth from '../hooks/useAuth';
 import { auth } from '../config/firebase';
-import LoadingButton from '@mui/lab/LoadingButton';
 
 export default function NavBar() {
-    const { currentUser, loading } = useAuth();
-
+    const { currentUser, currentUserType } = useAuth();
     const handleLogout = async () => {
         await signOut(auth);
         window.location.href = '/Login';
@@ -31,26 +29,24 @@ export default function NavBar() {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        height: '8vh',
                         // width: '100%',
                         flexGrow: 1,
-                        padding: '0% 5% !important', // Use pixel values for testing
+                        padding: '0% 4% !important',
                     }}>
-                        <div style={{
-                            flex: 1,
-                        }}>
-                            <img src={speakBrightLogo} alt="SpeakBright Logo" id='header-logo'
-                                style={{
-                                    height: "100px",
-                                }}
-                            >
-                            </img>
-                        </div>
+                        <img src={speakBrightLogo} alt="SpeakBright Logo" id='header-logo'
+                            style={{
+                                height: "50%",
+                            }}
+                        >
+                        </img>
                         <div style={{
                             display: 'flex',
                             flexDirection: 'row',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             flex: 1,
+                            marginLeft: '10vw',
                         }}>
                             <div id="HAC"
                                 style={{
@@ -64,7 +60,10 @@ export default function NavBar() {
                                     edge="start"
                                     color="inherit"
                                     aria-label=""
-                                    href="/"
+                                    href={
+                                        currentUserType === 'admin' ? '/Home/Admin' :
+                                            '/'
+                                    }
                                     sx={{
                                         mr: 3,
                                         "&.MuiButtonBase-root:hover": {
@@ -83,52 +82,35 @@ export default function NavBar() {
                                         Home
                                     </Typography>
                                 </IconButton>
-                                <IconButton
-                                    edge="start"
-                                    color="inherit"
-                                    aria-label="About"
-                                    href="/About"
-                                    sx={{
-                                        mr: 3,
-                                        "&.MuiButtonBase-root:hover": {
-                                            bgcolor: "transparent",
-                                            color: mainTheme.palette.secondary.light,
-                                        },
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h6"
-                                        component="div"
-                                        sx={{
-                                            textTransform: "capitalize",
-                                        }}
-                                    >
-                                        About
-                                    </Typography>
-                                </IconButton>
-                                <IconButton
-                                    edge="start"
-                                    color="inherit"
-                                    aria-label="Contact Us"
-                                    href="/Contact"
-                                    sx={{
-                                        mr: 3,
-                                        "&.MuiButtonBase-root:hover": {
-                                            bgcolor: "transparent",
-                                            color: mainTheme.palette.secondary.light,
-                                        },
-                                    }}
-                                >
-                                    <Typography
-                                        variant="h6"
-                                        component="div"
-                                        sx={{
-                                            textTransform: "capitalize",
-                                        }}
-                                    >
-                                        Contact Us
-                                    </Typography>
-                                </IconButton>
+                                {currentUserType === 'guardian' &&
+                                    (<>
+                                        <IconButton
+                                            id='navbar-analytics-button'
+                                            edge="start"
+                                            color="inherit"
+                                            aria-label=""
+                                            href={`/Home/Analytics/`}
+                                            sx={{
+                                                mr: 3,
+                                                "&.MuiButtonBase-root:hover": {
+                                                    bgcolor: "transparent",
+                                                    color: mainTheme.palette.secondary.light,
+                                                },
+                                                visibility: 'hidden'
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="h6"
+                                                component="div"
+                                                sx={{
+                                                    textTransform: "capitalize",
+                                                }}
+                                            >
+                                                Analytics
+                                            </Typography>
+                                        </IconButton>
+                                    </>)}
+
                             </div>
 
                             <div style={{
@@ -151,11 +133,15 @@ export default function NavBar() {
                                         },
                                     }}>
                                     Register
+                                    {currentUserType === null && ' Admin'}
+                                    {currentUserType === 'admin' && ' Guardian'}
+                                    {currentUserType === 'guardian' && ' Student'}
                                 </Button>
-                                {loading ? (
-                                    <LoadingButton loading
+                                {currentUser ? (
+                                    <Button
                                         variant="outlined"
                                         color="primary"
+                                        onClick={handleLogout}
                                         sx={{
                                             backgroundColor: 'white',
                                             color: '#790377',
@@ -164,47 +150,27 @@ export default function NavBar() {
                                                 backgroundColor: '#e0e0e0',
                                                 borderColor: '#6b0053',
                                             },
-                                        }}
-                                    >
-                                        Loading...
-                                    </LoadingButton>) :
-                                    currentUser ? (
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            onClick={handleLogout}
-                                            sx={{
-                                                backgroundColor: 'white',
-                                                color: '#790377',
-                                                borderColor: '#790377',
-                                                '&:hover': {
-                                                    backgroundColor: '#e0e0e0',
-                                                    borderColor: '#6b0053',
-                                                },
-                                            }}>
-                                            Logout
-                                        </Button>
-                                    ) : (
-                                        <Button
-                                            variant="outlined"
-                                            color="primary"
-                                            href="/Login"
-                                            sx={{
-                                                backgroundColor: 'white',
-                                                color: '#790377',
-                                                borderColor: '#790377',
-                                                '&:hover': {
-                                                    backgroundColor: '#e0e0e0',
-                                                    borderColor: '#6b0053',
-                                                },
-                                            }}>
-                                            Login
-                                        </Button>
-                                    )
-                                }
-
+                                        }}>
+                                        Logout
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        href="/Login"
+                                        sx={{
+                                            backgroundColor: 'white',
+                                            color: '#790377',
+                                            borderColor: '#790377',
+                                            '&:hover': {
+                                                backgroundColor: '#e0e0e0',
+                                                borderColor: '#6b0053',
+                                            },
+                                        }}>
+                                        Login
+                                    </Button>
+                                )}
                             </div>
-
                         </div>
 
                     </Toolbar>

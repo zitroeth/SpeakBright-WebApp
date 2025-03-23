@@ -1,25 +1,18 @@
-import { useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { useContext, } from 'react';
 import { getFirestore, doc, getDoc, Firestore } from 'firebase/firestore';
+import AuthContext from '../contexts/AuthContext';
 
 const db = getFirestore();
 
-const useAuth = () => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+export function useAuth() {
+    const context = useContext(AuthContext);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-            setLoading(false);
-        });
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
 
-        return () => unsubscribe();
-    }, []);
-
-    return { currentUser, loading };
-};
+    return context;
+}
 
 export async function checkIfDocumentExists(collection: string, docId: string, firestore: Firestore = db): Promise<boolean> {
     const docRef = doc(firestore, collection, docId);

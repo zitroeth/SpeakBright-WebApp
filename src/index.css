@@ -113,9 +113,7 @@ body {
   .MuiBox-root.css-i9gxme {
     height: auto;
   } */
-  #header-logo {
-    height: 65px !important;
-  }
+
   .MuiInputBase-root {
     height: 44px;
   }
@@ -153,10 +151,13 @@ body {
   margin: 5px;
 }
 
-/* #add-photo-imagelist .MuiImageList-standard {
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-content: center !important;
-  text-align: center !important;
+/* body {
+  margin: 0;
+} */
+
+/* 
+* {
+  box-sizing: border-box;
+  background: rgb(0 100 0/ 0.1) !important;
+  outline: 3px solid limegreen !important;
 } */
