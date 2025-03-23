@@ -966,13 +966,13 @@ export function filterStudentChartData(phasePromptData: PhasePromptMap | null, p
         chartData.independentWrongArray.push(dailyEntry.independentWrong);
     });
 
-    console.log(`dateArray len(${chartData.dateArray.length}): ${chartData.dateArray}`);
-    console.log(`gesturalArray len(${chartData.gesturalArray.length}): ${chartData.gesturalArray}`);
-    console.log(`independentArray len(${chartData.independentArray.length}): ${chartData.independentArray}`);
-    console.log(`modelingArray len(${chartData.modelingArray.length}): ${chartData.modelingArray}`);
-    console.log(`physicalArray len(${chartData.physicalArray.length}): ${chartData.physicalArray}`);
-    console.log(`verbalArray len(${chartData.verbalArray.length}): ${chartData.verbalArray}`);
-    console.log(`independentWrongArray len(${chartData.independentWrongArray.length}): ${chartData.independentWrongArray}`);
+    // console.log(`dateArray len(${chartData.dateArray.length}): ${chartData.dateArray}`);
+    // console.log(`gesturalArray len(${chartData.gesturalArray.length}): ${chartData.gesturalArray}`);
+    // console.log(`independentArray len(${chartData.independentArray.length}): ${chartData.independentArray}`);
+    // console.log(`modelingArray len(${chartData.modelingArray.length}): ${chartData.modelingArray}`);
+    // console.log(`physicalArray len(${chartData.physicalArray.length}): ${chartData.physicalArray}`);
+    // console.log(`verbalArray len(${chartData.verbalArray.length}): ${chartData.verbalArray}`);
+    // console.log(`independentWrongArray len(${chartData.independentWrongArray.length}): ${chartData.independentWrongArray}`);
     return chartData;
 }
 

@@ -116,6 +116,7 @@ export default function Register() {
                 name: name,
                 userID: uid,
                 userType: inputUserType,
+                phase: 1,
             }
 
             await setDoc(doc(secondaryDb, "users", uid), users_data);

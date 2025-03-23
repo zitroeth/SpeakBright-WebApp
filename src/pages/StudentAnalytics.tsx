@@ -501,8 +501,8 @@ function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, handleCloseP
                     </Typography>
                     <Box>
                         {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
-                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
-                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                        {value.phase2_independence && phase == '2' ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence && phase == '3' ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
                     </Box>
                 </CardContent>
             </Card>
@@ -552,8 +552,8 @@ function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, handleCloseP
                     </Typography>
                     <Box>
                         {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
-                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
-                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                        {value.phase2_independence && phase == '2' ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence && phase == '3' ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
                     </Box>
                 </CardContent>
             </Card>
@@ -601,8 +601,8 @@ function PhaseTransitionsModal({ openPhaseModal, phase, phaseCards, handleCloseP
                     </Typography>
                     <Box>
                         {value.phase1_independence ? <Filter1Icon sx={{ color: phaseNewColors[0].bg }} /> : null}
-                        {value.phase2_independence ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
-                        {value.phase3_independence ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
+                        {value.phase2_independence && phase == '2' ? <Filter2Icon sx={{ color: phaseNewColors[1].bg }} /> : null}
+                        {value.phase3_independence && phase == '3' ? <Filter3Icon sx={{ color: phaseNewColors[2].bg }} /> : null}
                     </Box>
                 </CardContent>
             </Card>

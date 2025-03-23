@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getFirestore, Firestore, initializeFirestore, CACHE_SIZE_UNLIMITED, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 // import { getAnalytics } from "firebase/analytics";
 
@@ -29,7 +29,11 @@ export const auth: Auth = getAuth(app);
 export const secondaryAuth: Auth = getAuth(secondaryApp);
 
 // Get Firestore instances
-export const db: Firestore = getFirestore(app);
+export const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ cacheSizeBytes: CACHE_SIZE_UNLIMITED, tabManager: persistentMultipleTabManager() })
+});
+// export const db: Firestore = getFirestore(app);
+
 export const secondaryDb: Firestore = getFirestore(secondaryApp);
 
 // Get Storage instance
